@@ -1,0 +1,68 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: tuyensinh-db
+    environment:
+      POSTGRES_USER: tuyensinh
+      POSTGRES_PASSWORD: tuyensinh_password
+      POSTGRES_DB: tuyensinh_db
+    volumes:
+      - tuyensinh-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - tuyensinh-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tuyensinh-backend
+    restart: unless-stopped
+    environment:
+      PORT: 1338
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: tuyensinh-db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: tuyensinh_db
+      DATABASE_USERNAME: tuyensinh
+      DATABASE_PASSWORD: tuyensinh_password
+      HOST: 0.0.0.0
+      APP_KEYS: "key1,key2,key3,key4"
+      API_TOKEN_SALT: "salt123"
+      ADMIN_JWT_SECRET: "adminjwt123"
+      TRANSFER_TOKEN_SALT: "transfer123"
+      JWT_SECRET: "jwt123"
+      NODE_ENV: production
+    ports:
+      - "1338:1338"
+    depends_on:
+      - db
+    networks:
+      - tuyensinh-net
+    volumes:
+      - backend-uploads:/opt/app/public/uploads
+
+  frontend:
+    build:
+      context: ./fontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_STRAPI_URL=http://localhost:1338
+    container_name: tuyensinh-frontend
+    restart: unless-stopped
+    ports:
+      - "81:81"
+    networks:
+      - tuyensinh-net
+    depends_on:
+      - backend
+
+volumes:
+  tuyensinh-data:
+  backend-uploads:
+
+
+networks:
+  tuyensinh-net:
