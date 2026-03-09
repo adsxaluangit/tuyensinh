@@ -1,0 +1,23 @@
+{
+    "kind": "collectionType",
+    "collectionName": "system_settings",
+    "info": {
+        "singularName": "system-setting",
+        "pluralName": "system-settings",
+        "displayName": "Cài đặt hệ thống",
+        "description": ""
+    },
+    "options": {
+        "draftAndPublish": false
+    },
+    "attributes": {
+        "key": {
+            "type": "string",
+            "required": true,
+            "unique": true
+        },
+        "value": {
+            "type": "text"
+        }
+    }
+}

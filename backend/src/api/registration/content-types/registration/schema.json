@@ -1,0 +1,194 @@
+{
+    "kind": "collectionType",
+    "collectionName": "registrations",
+    "info": {
+        "singularName": "registration",
+        "pluralName": "registrations",
+        "displayName": "Đăng ký tuyển sinh",
+        "description": ""
+    },
+    "options": {
+        "draftAndPublish": true
+    },
+    "attributes": {
+        "fullName": {
+            "type": "string",
+            "required": true
+        },
+        "dob": {
+            "type": "date"
+        },
+        "pob": {
+            "type": "string"
+        },
+        "gender": {
+            "type": "enumeration",
+            "enum": [
+                "Nam",
+                "Nữ",
+                "Khác"
+            ]
+        },
+        "ethnicity": {
+            "type": "string"
+        },
+        "idNumber": {
+            "type": "string",
+            "required": true,
+            "unique": true
+        },
+        "issueDate": {
+            "type": "date"
+        },
+        "issuePlace": {
+            "type": "string"
+        },
+        "province": {
+            "type": "string"
+        },
+        "district": {
+            "type": "string"
+        },
+        "addressDetails": {
+            "type": "string"
+        },
+        "phone": {
+            "type": "string",
+            "required": true
+        },
+        "email": {
+            "type": "string"
+        },
+        "parentName": {
+            "type": "string"
+        },
+        "parentPhone": {
+            "type": "string"
+        },
+        "campus": {
+            "type": "relation",
+            "relation": "manyToOne",
+            "target": "api::campus.campus"
+        },
+        "educationLevel": {
+            "type": "relation",
+            "relation": "manyToOne",
+            "target": "api::education-level.education-level"
+        },
+        "choice1Major": {
+            "type": "string"
+        },
+        "choice1Specialty": {
+            "type": "string"
+        },
+        "choice2Major": {
+            "type": "string"
+        },
+        "choice2Specialty": {
+            "type": "string"
+        },
+        "gradYear": {
+            "type": "string"
+        },
+        "gradSchool": {
+            "type": "string"
+        },
+        "gradProvince": {
+            "type": "string"
+        },
+        "gradDistrict": {
+            "type": "string"
+        },
+        "diplomaNumber": {
+            "type": "string"
+        },
+        "grades": {
+            "type": "json"
+        },
+        "recipient": {
+            "type": "enumeration",
+            "enum": [
+                "Thí sinh",
+                "Phụ huynh/người bảo trợ"
+            ]
+        },
+        "deliveryAddress": {
+            "type": "enumeration",
+            "enum": [
+                "Địa chỉ hộ khẩu thường trú",
+                "Địa chỉ khác"
+            ]
+        },
+        "deliveryAddressDetails": {
+            "type": "string"
+        },
+        "status": {
+            "type": "enumeration",
+            "enum": [
+                "Chờ Duyệt",
+                "Đã tiếp nhận hồ sơ",
+                "Trúng tuyển",
+                "Đã khóa"
+            ],
+            "default": "Chờ Duyệt"
+        },
+        "tuitionStatus": {
+            "type": "enumeration",
+            "enum": [
+                "Chưa nộp",
+                "Nộp một phần",
+                "Đã nộp đủ"
+            ],
+            "default": "Chưa nộp"
+        },
+        "tuitionAmount": {
+            "type": "decimal"
+        },
+        "healthAmount": {
+            "type": "decimal"
+        },
+        "comprehensiveAmount": {
+            "type": "decimal"
+        },
+        "uniformAmount": {
+            "type": "decimal"
+        },
+        "tuitionPaidAmount": {
+            "type": "decimal",
+            "default": 0
+        },
+        "isHealthSelected": {
+            "type": "boolean",
+            "default": true
+        },
+        "isComprehensiveSelected": {
+            "type": "boolean",
+            "default": true
+        },
+        "isUniformSelected": {
+            "type": "boolean",
+            "default": true
+        },
+        "docSeq": {
+            "type": "string"
+        },
+        "password": {
+            "type": "string"
+        },
+        "paymentMethod": {
+            "type": "string"
+        },
+        "frontId": {
+            "type": "text"
+        },
+        "backId": {
+            "type": "text"
+        },
+        "diploma": {
+            "type": "text"
+        },
+        "tempCert": {
+            "type": "text"
+        }
+    }
+}

@@ -1,0 +1,38 @@
+{
+    "kind": "collectionType",
+    "collectionName": "occupations",
+    "info": {
+        "singularName": "occupation",
+        "pluralName": "occupations",
+        "displayName": "Nghề đào tạo",
+        "description": ""
+    },
+    "options": {
+        "draftAndPublish": false
+    },
+    "attributes": {
+        "name": {
+            "type": "string",
+            "required": true
+        },
+        "code": {
+            "type": "string",
+            "required": true
+        },
+        "amount": {
+            "type": "decimal"
+        },
+        "campus": {
+            "type": "relation",
+            "relation": "manyToOne",
+            "target": "api::campus.campus",
+            "inversedBy": "occupations"
+        },
+        "educationLevel": {
+            "type": "relation",
+            "relation": "manyToOne",
+            "target": "api::education-level.education-level",
+            "inversedBy": "occupations"
+        }
+    }
+}

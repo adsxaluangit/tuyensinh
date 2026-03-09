@@ -1,0 +1,7 @@
+{
+  "name": "Cao đẳng Hàng hải và Đường thủy I (2)",
+  "description": "Hệ thống đăng ký tuyển sinh trực tuyến của Trường Cao đẳng Hàng hải và Đường thủy I.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}

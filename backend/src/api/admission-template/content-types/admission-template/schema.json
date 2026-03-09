@@ -1,0 +1,62 @@
+{
+    "kind": "collectionType",
+    "collectionName": "admission_templates",
+    "info": {
+        "singularName": "admission-template",
+        "pluralName": "admission-templates",
+        "displayName": "Mẫu giấy báo nhập học",
+        "description": ""
+    },
+    "options": {
+        "draftAndPublish": false
+    },
+    "attributes": {
+        "campus": {
+            "type": "string",
+            "required": true,
+            "unique": true
+        },
+        "title": {
+            "type": "string"
+        },
+        "basis": {
+            "type": "text"
+        },
+        "announcer": {
+            "type": "string"
+        },
+        "location": {
+            "type": "string"
+        },
+        "requirements": {
+            "type": "json"
+        },
+        "hotline": {
+            "type": "string"
+        },
+        "website": {
+            "type": "string"
+        },
+        "footerTitle": {
+            "type": "string"
+        },
+        "footerName": {
+            "type": "string"
+        },
+        "admissionHour": {
+            "type": "string"
+        },
+        "admissionDay": {
+            "type": "string"
+        },
+        "admissionMonth": {
+            "type": "string"
+        },
+        "admissionYear": {
+            "type": "string"
+        },
+        "qrCodeImage": {
+            "type": "text"
+        }
+    }
+}

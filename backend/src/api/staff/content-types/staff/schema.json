@@ -1,0 +1,52 @@
+{
+    "kind": "collectionType",
+    "collectionName": "staffs",
+    "info": {
+        "singularName": "staff",
+        "pluralName": "staffs",
+        "displayName": "Tài khoản cán bộ",
+        "description": ""
+    },
+    "options": {
+        "draftAndPublish": false
+    },
+    "attributes": {
+        "fullName": {
+            "type": "string",
+            "required": true
+        },
+        "username": {
+            "type": "string",
+            "required": true,
+            "unique": true
+        },
+        "password": {
+            "type": "string",
+            "required": true
+        },
+        "role": {
+            "type": "enumeration",
+            "enum": [
+                "Quản trị viên",
+                "Cán bộ tiếp nhận",
+                "Cán bộ duyệt hồ sơ",
+                "Kế toán"
+            ],
+            "required": true
+        },
+        "campus": {
+            "type": "string"
+        },
+        "status": {
+            "type": "enumeration",
+            "enum": [
+                "Hoạt động",
+                "Tạm khóa"
+            ],
+            "default": "Hoạt động"
+        },
+        "lastLogin": {
+            "type": "datetime"
+        }
+    }
+}

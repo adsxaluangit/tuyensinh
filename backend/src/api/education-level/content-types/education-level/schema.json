@@ -1,0 +1,32 @@
+{
+    "kind": "collectionType",
+    "collectionName": "education_levels",
+    "info": {
+        "singularName": "education-level",
+        "pluralName": "education-levels",
+        "displayName": "Hệ đào tạo",
+        "description": ""
+    },
+    "options": {
+        "draftAndPublish": false
+    },
+    "attributes": {
+        "name": {
+            "type": "string",
+            "required": true,
+            "unique": true
+        },
+        "code": {
+            "type": "string"
+        },
+        "description": {
+            "type": "string"
+        },
+        "occupations": {
+            "type": "relation",
+            "relation": "oneToMany",
+            "target": "api::occupation.occupation",
+            "mappedBy": "educationLevel"
+        }
+    }
+}

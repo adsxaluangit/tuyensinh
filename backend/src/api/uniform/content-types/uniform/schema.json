@@ -1,0 +1,27 @@
+{
+    "kind": "collectionType",
+    "collectionName": "uniforms",
+    "info": {
+        "singularName": "uniform",
+        "pluralName": "uniforms",
+        "displayName": "Đồng Phục",
+        "description": ""
+    },
+    "options": {
+        "draftAndPublish": true
+    },
+    "attributes": {
+        "code": {
+            "type": "string",
+            "required": true,
+            "unique": true
+        },
+        "description": {
+            "type": "text"
+        },
+        "amount": {
+            "type": "integer",
+            "required": true
+        }
+    }
+}
