@@ -35,6 +35,7 @@ services:
       TRANSFER_TOKEN_SALT: "transfer123"
       JWT_SECRET: "jwt123"
       NODE_ENV: production
+      PUBLIC_URL: http://tuyensinh1.mic1.edu.vn:1338
     ports:
       - "1338:1338"
     depends_on:
@@ -49,11 +50,11 @@ services:
       context: ./fontend
       dockerfile: Dockerfile
       args:
-        - VITE_STRAPI_URL=http://localhost:1338
+        - VITE_STRAPI_URL=http://tuyensinh1.mic1.edu.vn:1338
     container_name: tuyensinh-frontend
     restart: unless-stopped
     ports:
-      - "81:81"
+      - "82:82"
     networks:
       - tuyensinh-net
     depends_on:
