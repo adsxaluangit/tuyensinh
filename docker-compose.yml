@@ -23,7 +23,7 @@ services:
     environment:
       PORT: 1338
       DATABASE_CLIENT: postgres
-      DATABASE_HOST: tuyensinh-db
+      DATABASE_HOST: db
       DATABASE_PORT: 5432
       DATABASE_NAME: tuyensinh_db
       DATABASE_USERNAME: tuyensinh
