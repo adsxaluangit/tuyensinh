@@ -53,7 +53,7 @@ services:
     container_name: tuyensinh-frontend
     restart: unless-stopped
     ports:
-      - "81:81"
+      - "82:82"
     networks:
       - tuyensinh-net
     depends_on:
