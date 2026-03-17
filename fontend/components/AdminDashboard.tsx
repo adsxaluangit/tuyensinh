@@ -965,7 +965,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const handleExportTuitionExcel = () => {
     if (submissions.length === 0) return alert('Không có dữ liệu!');
-    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Ngành học', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú'];
+    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Ngành học', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc thu tiền', 'Ngày thu tiền'];
     const rows = approvedSubmissions.map((s, idx) => {
       const hAmount = s.isHealthSelected ? (s.healthAmount || 0) : 0;
       const cAmount = s.isComprehensiveSelected ? (s.comprehensiveAmount || 0) : 0;
@@ -991,7 +991,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         (s.tuitionPaidAmount || 0),
         remaining > 0 ? remaining : 0,
         s.tuitionStatus || TuitionStatus.UNPAID,
-        s.paymentMethod || ''
+        s.paymentMethod || '',
+        s.collectorAccount || '',
+        s.collectedDate ? new Date(s.collectedDate).toLocaleString('vi-VN') : ''
       ];
     });
     const excelHtml = `<html><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
@@ -1651,8 +1653,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                               totalRequired={totalRequired}
                               onUpdate={async (paid, status) => {
                                 try {
-                                  setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, tuitionPaidAmount: paid, tuitionStatus: status } : item));
-                                  await api.updateRegistration(s.docId, { tuitionPaidAmount: paid, tuitionStatus: status });
+                                  const now = new Date().toISOString();
+                                  const collector = user.username;
+                                  setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now } : item));
+                                  await api.updateRegistration(s.docId, { tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now });
                                 } catch (err) {
                                   console.error(err);
                                   alert("Lỗi khi cập nhật số tiền đã nộp");
@@ -1666,8 +1670,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                           <td className="px-4 py-4 text-center"><select className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs font-medium outline-none" value={s.paymentMethod || ''} onChange={async (e) => {
                             const newMethod = e.target.value;
                             try {
-                              setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod } : item));
-                              await api.updateRegistration(s.docId, { paymentMethod: newMethod });
+                              const now = new Date().toISOString();
+                              const collector = user.username;
+                              setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod, collectorAccount: collector, collectedDate: now } : item));
+                              await api.updateRegistration(s.docId, { paymentMethod: newMethod, collectorAccount: collector, collectedDate: now });
                             } catch (err) {
                               alert("Lỗi khi lưu phương thức thanh toán");
                               fetchData();

@@ -189,6 +189,12 @@
         },
         "tempCert": {
             "type": "text"
+        },
+        "collectorAccount": {
+            "type": "string"
+        },
+        "collectedDate": {
+            "type": "datetime"
         }
     }
 }
