@@ -151,11 +151,18 @@ const App: React.FC = () => {
     // Loại bỏ các trường hệ thống để tránh lỗi "Invalid key id" từ Strapi
     const { id, documentId, createdAt, updatedAt, publishedAt, ...cleanFormData } = formData;
 
-    const submissionData: any = {
-      ...cleanFormData,
+    const submissionData: any = {};
+    Object.keys(cleanFormData).forEach(key => {
+      const val = (cleanFormData as any)[key];
+      // Only send primitive values, arrays (for grades), or nulls. 
+      // Avoid sending nested objects (like campus, educationLevel) which we override below.
+      if (val === null || typeof val !== 'object' || Array.isArray(val) || key === 'grades') {
+        submissionData[key] = val;
+      }
+    });
+
+    Object.assign(submissionData, {
       ...files,
-      grades,
-      idNumber: formData.idNumber,
       status: isEditing ? formData.status : 'Chờ Duyệt',
       tuitionAmount: selectedOcc?.amount || 0,
       healthAmount: healthConfig?.amount || 0,
@@ -165,10 +172,9 @@ const App: React.FC = () => {
       isHealthSelected: true,
       isComprehensiveSelected: true,
       isUniformSelected: true,
-      // Pass documentIds for relations
       campus: campusObj?.id,
       educationLevel: levelObj?.id
-    };
+    });
 
     try {
       if (isEditing) {
@@ -232,7 +238,12 @@ const App: React.FC = () => {
           };
           setFormData(flattenedRecord);
           setGrades(record.grades || {});
-          // Files are handled differently in Strapi, but for now we keep the structure
+          setFiles({
+            frontId: record.frontId || null,
+            backId: record.backId || null,
+            diploma: record.diploma || null,
+            tempCert: record.tempCert || null,
+          });
           setIsEditing(true);
           setCurrentUser({ id: record.idNumber, fullName: record.fullName, username: record.idNumber, role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString(), password: record.password } as any);
           setView('form');

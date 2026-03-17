@@ -111,7 +111,7 @@ export const updateRegistration = async (documentId: string, formData: any) => {
 };
 
 export const findRegistrationByCCCD = async (cccd: string) => {
-    const data = await fetchAPI(`/api/registrations?filters[idNumber][$eq]=${cccd}`);
+    const data = await fetchAPI(`/api/registrations?filters[idNumber][$eq]=${cccd}&populate=*`);
     return data.data[0];
 };
 
