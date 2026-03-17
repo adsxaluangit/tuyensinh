@@ -91,4 +91,6 @@ export interface FormData {
   };
   password?: string;
   paymentMethod?: string;
+  collectorAccount?: string;
+  collectedDate?: string;
 }

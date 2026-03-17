@@ -10,7 +10,7 @@ services:
     volumes:
       - tuyensinh-data:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "5435:5432"
     networks:
       - tuyensinh-net
 
@@ -35,6 +35,8 @@ services:
       TRANSFER_TOKEN_SALT: "transfer123"
       JWT_SECRET: "jwt123"
       NODE_ENV: production
+      STRAPI_TELEMETRY_DISABLED: "true"
+      NODE_OPTIONS: "--max-old-space-size=2048"
       PUBLIC_URL: http://tuyensinh1.mic1.edu.vn:82
     ports:
       - "1338:1338"
