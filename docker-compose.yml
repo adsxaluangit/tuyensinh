@@ -37,6 +37,12 @@ services:
       NODE_ENV: production
       STRAPI_TELEMETRY_DISABLED: "true"
       NODE_OPTIONS: "--max-old-space-size=2048"
+      SMTP_HOST: mail.mic1.edu.vn
+      SMTP_PORT: 587
+      SMTP_USERNAME: bantuyensinh@mic1.edu.vn
+      SMTP_PASSWORD: Ts123456a@
+      SMTP_FROM: bantuyensinh@mic1.edu.vn
+      SMTP_FROM_NAME: "Ban tuyển sinh"
       PUBLIC_URL: http://tuyensinh1.mic1.edu.vn:82
     ports:
       - "1338:1338"
