@@ -978,7 +978,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         s.fullName,
         s.dob ? (() => {
           const d = new Date(s.dob);
-          return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+          return `'${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
         })() : '',
         s.pob || '',
         s.ethnicity || '',
@@ -998,7 +998,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         s.collectorAccount || '',
         s.collectedDate ? (() => {
           const d = new Date(s.collectedDate);
-          return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+          return `'${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
         })() : '',
         s.collectedDate ? new Date(s.collectedDate).toLocaleString('vi-VN') : ''
       ];
