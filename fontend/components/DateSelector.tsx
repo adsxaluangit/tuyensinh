@@ -1,5 +1,5 @@
 
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface DateSelectorProps {
   value: string; // ISO format YYYY-MM-DD
@@ -8,11 +8,26 @@ interface DateSelectorProps {
 }
 
 const DateSelector: React.FC<DateSelectorProps> = ({ value, onChange, required }) => {
-  // Parse current value
-  const dateObj = value ? new Date(value) : null;
-  const currentDay = dateObj ? dateObj.getDate() : '';
-  const currentMonth = dateObj ? dateObj.getMonth() + 1 : '';
-  const currentYear = dateObj ? dateObj.getFullYear() : '';
+  const [day, setDay] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
+
+  // Sync with value prop (for initial load or external changes)
+  useEffect(() => {
+    if (value) {
+      const parts = value.split('-');
+      if (parts.length === 3) {
+        setYear(parts[0]);
+        setMonth(parseInt(parts[1], 10).toString());
+        setDay(parseInt(parts[2], 10).toString());
+      }
+    } else {
+      // If parent clears the value, we clear local state too
+      setDay('');
+      setMonth('');
+      setYear('');
+    }
+  }, [value]);
 
   const years = useMemo(() => {
     const end = new Date().getFullYear();
@@ -25,22 +40,21 @@ const DateSelector: React.FC<DateSelectorProps> = ({ value, onChange, required }
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   const days = useMemo(() => {
-    if (!currentMonth || !currentYear) return Array.from({ length: 31 }, (_, i) => i + 1);
-    const lastDay = new Date(Number(currentYear), Number(currentMonth), 0).getDate();
+    if (!month || !year) return Array.from({ length: 31 }, (_, i) => i + 1);
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
     return Array.from({ length: lastDay }, (_, i) => i + 1);
-  }, [currentMonth, currentYear]);
+  }, [month, year]);
 
   const handleUpdate = (type: 'day' | 'month' | 'year', val: string) => {
-    let d = currentDay;
-    let m = currentMonth;
-    let y = currentYear;
+    let d = day;
+    let m = month;
+    let y = year;
 
-    if (type === 'day') d = Number(val);
-    if (type === 'month') m = Number(val);
-    if (type === 'year') y = Number(val);
+    if (type === 'day') { setDay(val); d = val; }
+    if (type === 'month') { setMonth(val); m = val; }
+    if (type === 'year') { setYear(val); y = val; }
 
     if (y && m && d) {
-      // Ensure day is valid for the month
       const numY = Number(y);
       const numM = Number(m);
       const numD = Number(d);
@@ -48,12 +62,16 @@ const DateSelector: React.FC<DateSelectorProps> = ({ value, onChange, required }
       const lastDay = new Date(numY, numM, 0).getDate();
       const finalDay = numD > lastDay ? lastDay : numD;
       
+      if (finalDay !== numD) {
+        setDay(finalDay.toString());
+        d = finalDay.toString();
+      }
+      
       const pad = (n: number) => n.toString().padStart(2, '0');
-      onChange(`${numY}-${pad(numM)}-${pad(finalDay)}`);
+      onChange(`${numY}-${pad(numM)}-${pad(Number(d))}`);
     } else {
-      // If incomplete, we can optionally clear it or just update the part
-      // But for simplicity in this form, we wait until all are selected or just store partials (not ideal for type="date")
-      // Since App.tsx uses "dob" as a string, let's just update what we can
+      // Clear parent value if incomplete
+      if (value) onChange('');
     }
   };
 
@@ -65,7 +83,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({ value, onChange, required }
         <select 
           required={required}
           className={selectClasses} 
-          value={currentDay} 
+          value={day} 
           onChange={(e) => handleUpdate('day', e.target.value)}
         >
           <option value="">Ngày</option>
@@ -80,7 +98,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({ value, onChange, required }
         <select 
           required={required}
           className={selectClasses} 
-          value={currentMonth} 
+          value={month} 
           onChange={(e) => handleUpdate('month', e.target.value)}
         >
           <option value="">Tháng</option>
@@ -95,7 +113,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({ value, onChange, required }
         <select 
           required={required}
           className={selectClasses} 
-          value={currentYear} 
+          value={year} 
           onChange={(e) => handleUpdate('year', e.target.value)}
         >
           <option value="">Năm</option>
