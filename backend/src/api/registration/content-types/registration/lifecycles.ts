@@ -36,15 +36,17 @@ export default {
                 <p style="margin: 5px 0;"><strong>Ngành học:</strong> ${major}</p>
                 <p style="margin: 5px 0;"><strong>Hệ đào tạo:</strong> ${eduLevel}</p>
                 <p style="margin: 5px 0;"><strong>Cơ sở nhập học:</strong> ${campusName}</p>
+                <p style="margin: 5px 0;"><strong>Mật khẩu tra cứu/chỉnh sửa:</strong> <span style="color: #dc2626; font-weight: bold;">${registration.password || 'N/A'}</span></p>
               </div>
 
-              <p>Nhà trường trân trọng mời em sớm hoàn thiện các thủ tục nhập học theo quy định. Em có thể xem chi tiết giấy báo và hướng dẫn nhập học bằng cách đăng nhập vào hệ thống tra cứu hồ sơ.</p>
+              <p>Nhà trường trân trọng mời em sớm hoàn thiện các thủ tục nhập học theo quy định. Em có thể sử dụng <strong>Mã hồ sơ</strong> và <strong>Mật khẩu</strong> trên để đăng nhập vào hệ thống tra cứu tra cứu, in giấy báo và chỉnh sửa hồ sơ nếu cần thiết.</p>
               
               <div style="text-align: center; margin: 30px 0;">
                 <a href="http://tuyensinh1.mic1.edu.vn:82" style="background-color: #dc2626; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">TRA CỨU HỒ SƠ</a>
               </div>
 
               <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ Ban Tuyển sinh để được hỗ trợ.</p>
+              <p>Điện thoại liên hệ: 0916883118.</p>
               <p>Trân trọng,</p>
               <p><strong>Ban Tuyển sinh</strong><br>Trường Cao đẳng Hàng hải và Đường thủy I</p>
             </div>
