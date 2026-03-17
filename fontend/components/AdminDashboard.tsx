@@ -150,6 +150,36 @@ const FilePreviewItem = ({ label, src }: { label: string, src: string | null }) 
   </div>
 );
 
+const TuitionPaidInput: React.FC<{
+  initialValue: number;
+  totalRequired: number;
+  onUpdate: (paid: number, status: TuitionStatus) => void;
+}> = ({ initialValue, totalRequired, onUpdate }) => {
+  const [localValue, setLocalValue] = useState(initialValue.toLocaleString('vi-VN'));
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawValue = e.target.value.replace(/\D/g, '');
+    const numValue = parseInt(rawValue) || 0;
+    setLocalValue(numValue.toLocaleString('vi-VN'));
+
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const status = numValue >= totalRequired ? TuitionStatus.PAID : (numValue > 0 ? TuitionStatus.PARTIAL : TuitionStatus.UNPAID);
+      onUpdate(numValue, status);
+    }, 1000);
+  };
+
+  return (
+    <input
+      type="text"
+      className="w-32 bg-white border border-gray-200 rounded-lg px-2 py-1 text-right font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500/20"
+      value={localValue}
+      onChange={handleChange}
+    />
+  );
+};
+
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>('submissions');
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
@@ -850,24 +880,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     }
   };
 
-  const filteredSubmissions = submissions
-    .filter(s => {
-      if (user?.role !== 'Quản trị viên') {
-        if (!user?.campus || s.campus !== user.campus) return false;
-      }
-      const matchesSearch = s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || s.phone.includes(searchTerm) || s.idNumber.includes(searchTerm);
-      const matchesCampus = filterCampus === '' || s.campus === filterCampus;
-      const matchesLevel = filterLevel === '' || s.educationLevel === filterLevel;
-      const matchesMajor = filterMajor === '' || s.choice1Major === filterMajor;
-      return matchesSearch && matchesCampus && matchesLevel && matchesMajor;
-    })
-    .sort((a, b) => {
-      const priorityA = STATUS_PRIORITY[a.status] || 99;
-      const priorityB = STATUS_PRIORITY[b.status] || 99;
-      return priorityA - priorityB;
-    });
+  const filteredSubmissions = React.useMemo(() => {
+    return submissions
+      .filter(s => {
+        if (user?.role !== 'Quản trị viên') {
+          if (!user?.campus || s.campus !== user.campus) return false;
+        }
+        const searchLower = searchTerm.toLowerCase();
+        const matchesSearch = s.fullName.toLowerCase().includes(searchLower) ||
+          s.phone.includes(searchTerm) ||
+          s.idNumber.includes(searchTerm);
+        const matchesCampus = filterCampus === '' || s.campus === filterCampus;
+        const matchesLevel = filterLevel === '' || s.educationLevel === filterLevel;
+        const matchesMajor = filterMajor === '' || s.choice1Major === filterMajor;
+        return matchesSearch && matchesCampus && matchesLevel && matchesMajor;
+      })
+      .sort((a, b) => {
+        const priorityA = STATUS_PRIORITY[a.status] || 99;
+        const priorityB = STATUS_PRIORITY[b.status] || 99;
+        return priorityA - priorityB;
+      });
+  }, [submissions, searchTerm, filterCampus, filterLevel, filterMajor, user?.role, user?.campus]);
 
-  const approvedSubmissions = filteredSubmissions.filter(s => s.status === SubmissionStatus.APPROVED);
+  const approvedSubmissions = React.useMemo(() => {
+    return filteredSubmissions.filter(s => s.status === SubmissionStatus.APPROVED);
+  }, [filteredSubmissions]);
 
   const handleExportExcel = () => {
     if (submissions.length === 0) return alert('Không có dữ liệu!');
@@ -1576,7 +1613,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {approvedSubmissions.length === 0 ? (
-                    <tr><td colSpan={11} className="px-6 py-10 text-center text-gray-400 italic font-medium bg-gray-50/20">Chưa có thí sinh trúng tuyển nào trong danh sách lọc hiện tại.</td></tr>
+                    <tr><td colSpan={12} className="px-6 py-10 text-center text-gray-400 italic font-medium bg-gray-50/20">Chưa có thí sinh trúng tuyển nào trong danh sách lọc hiện tại.</td></tr>
                   ) : (
                     approvedSubmissions.map(s => {
                       const hVal = s.isHealthSelected ? (s.healthAmount || 0) : 0;
@@ -1584,14 +1621,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                       const uVal = s.isUniformSelected ? (s.uniformAmount || 0) : 0;
                       const totalRequired = (s.tuitionAmount || 0) + hVal + cVal + uVal;
                       const remaining = totalRequired - (s.tuitionPaidAmount || 0);
+
                       const handleFeeSelect = async (field: 'isHealthSelected' | 'isComprehensiveSelected' | 'isUniformSelected', checked: boolean) => {
                         try {
+                          // Update local state first for instant feedback
+                          setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, [field]: checked } : item));
                           await api.updateRegistration(s.docId, { [field]: checked });
-                          fetchData();
                         } catch (error) {
                           alert("Lỗi khi cập nhật cấu hình phí");
+                          // Revert on error
+                          setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, [field]: !checked } : item));
                         }
                       };
+
                       return (
                         <tr key={s.id} className="hover:bg-gray-50">
                           <td className="px-4 py-4 text-xs font-mono text-gray-400">{s.idNumber}</td>
@@ -1602,25 +1644,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-blue-600 cursor-pointer" checked={s.isHealthSelected} onChange={(e) => handleFeeSelect('isHealthSelected', e.target.checked)} /><span className={`font-bold text-blue-600 ${!s.isHealthSelected && 'opacity-30'}`}>{(s.healthAmount || 0).toLocaleString('vi-VN')}</span></div></td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-orange-600 cursor-pointer" checked={s.isComprehensiveSelected} onChange={(e) => handleFeeSelect('isComprehensiveSelected', e.target.checked)} /><span className={`font-bold text-orange-600 ${!s.isComprehensiveSelected && 'opacity-30'}`}>{(s.comprehensiveAmount || 0).toLocaleString('vi-VN')}</span></div></td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-slate-600 cursor-pointer" checked={s.isUniformSelected} onChange={(e) => handleFeeSelect('isUniformSelected', e.target.checked)} /><span className={`font-bold text-slate-600 ${!s.isUniformSelected && 'opacity-30'}`}>{(s.uniformAmount || 0).toLocaleString('vi-VN')}</span></div></td>
-                          <td className="px-4 py-4 text-center"><input type="text" className="w-32 bg-white border border-gray-200 rounded-lg px-2 py-1 text-right font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500/20" value={(s.tuitionPaidAmount || 0).toLocaleString('vi-VN')} onChange={async (e) => {
-                            const rawValue = e.target.value.replace(/\D/g, '');
-                            const paid = parseInt(rawValue) || 0;
-                            const status = paid >= totalRequired ? TuitionStatus.PAID : (paid > 0 ? TuitionStatus.PARTIAL : TuitionStatus.UNPAID);
-                            try {
-                              await api.updateRegistration(s.docId, { tuitionPaidAmount: paid, tuitionStatus: status });
-                              fetchData();
-                            } catch (err) {
-                              console.error(err);
-                            }
-                          }} /></td>
+                          <td className="px-4 py-4 text-center">
+                            <TuitionPaidInput
+                              key={`${s.id}-${s.tuitionPaidAmount}`}
+                              initialValue={s.tuitionPaidAmount || 0}
+                              totalRequired={totalRequired}
+                              onUpdate={async (paid, status) => {
+                                try {
+                                  setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, tuitionPaidAmount: paid, tuitionStatus: status } : item));
+                                  await api.updateRegistration(s.docId, { tuitionPaidAmount: paid, tuitionStatus: status });
+                                } catch (err) {
+                                  console.error(err);
+                                  alert("Lỗi khi cập nhật số tiền đã nộp");
+                                  fetchData(); // Rollback if necessary
+                                }
+                              }}
+                            />
+                          </td>
                           <td className="px-4 py-4 text-center font-bold text-red-600">{(remaining > 0 ? remaining : 0).toLocaleString('vi-VN')}</td>
                           <td className="px-4 py-4 text-center"><button onClick={() => handlePrintInvoice(s)} className="p-2 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all shadow-sm border border-emerald-100" title="In biên lai / Hóa đơn"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg></button></td>
                           <td className="px-4 py-4 text-center"><select className="bg-white border border-gray-200 rounded-lg px-2 py-1 text-xs font-medium outline-none" value={s.paymentMethod || ''} onChange={async (e) => {
+                            const newMethod = e.target.value;
                             try {
-                              await api.updateRegistration(s.docId, { paymentMethod: e.target.value });
-                              fetchData();
+                              setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod } : item));
+                              await api.updateRegistration(s.docId, { paymentMethod: newMethod });
                             } catch (err) {
                               alert("Lỗi khi lưu phương thức thanh toán");
+                              fetchData();
                             }
                           }}><option value="">-- Chọn --</option><option value="Tiền mặt">Tiền mặt</option><option value="Chuyển khoản">Chuyển khoản</option></select></td>
                         </tr>
