@@ -4,6 +4,7 @@ import FormSection from './components/FormSection';
 import InputGroup from './components/InputGroup';
 import FileUpload from './components/FileUpload';
 import AdminDashboard from './components/AdminDashboard';
+import DateSelector from './components/DateSelector';
 import { PROVINCES } from './constants';
 import { RecipientType, AddressType, FormData, SubmissionStatus, User } from './types';
 import * as api from './api';
@@ -306,7 +307,7 @@ const App: React.FC = () => {
                 <input type="text" required placeholder="Nhập họ và tên" className={inputClasses} value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
               </InputGroup>
               <InputGroup label="Ngày sinh" required>
-                <input type="date" required className={inputClasses} value={formData.dob} onChange={(e) => setFormData({ ...formData, dob: e.target.value })} />
+                <DateSelector required value={formData.dob} onChange={(val) => setFormData({ ...formData, dob: val })} />
               </InputGroup>
               <InputGroup label="Nơi sinh" required>
                 <input type="text" required placeholder="Tỉnh/Thành phố" className={inputClasses} value={formData.pob} onChange={(e) => setFormData({ ...formData, pob: e.target.value })} />
@@ -329,7 +330,7 @@ const App: React.FC = () => {
                 <input type="text" required placeholder="Dân tộc" className={inputClasses} value={formData.ethnicity} onChange={(e) => setFormData({ ...formData, ethnicity: e.target.value })} />
               </InputGroup>
               <InputGroup label="Ngày cấp" required>
-                <input type="date" required className={inputClasses} value={formData.issueDate} onChange={(e) => setFormData({ ...formData, issueDate: e.target.value })} />
+                <DateSelector required value={formData.issueDate} onChange={(val) => setFormData({ ...formData, issueDate: val })} />
               </InputGroup>
               <InputGroup label="Nơi cấp" required>
                 <input type="text" required className={inputClasses} value={formData.issuePlace} onChange={(e) => setFormData({ ...formData, issuePlace: e.target.value })} />
