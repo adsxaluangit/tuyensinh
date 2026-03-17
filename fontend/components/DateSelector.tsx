@@ -87,7 +87,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({ value, onChange, required }
           onChange={(e) => handleUpdate('day', e.target.value)}
         >
           <option value="">Ngày</option>
-          {days.map(d => <option key={d} value={d}>{d}</option>)}
+          {days.map(d => <option key={d} value={d}>{d.toString().padStart(2, '0')}</option>)}
         </select>
         <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" /></svg>
@@ -102,7 +102,7 @@ const DateSelector: React.FC<DateSelectorProps> = ({ value, onChange, required }
           onChange={(e) => handleUpdate('month', e.target.value)}
         >
           <option value="">Tháng</option>
-          {months.map(m => <option key={m} value={m}>{m}</option>)}
+          {months.map(m => <option key={m} value={m}>{m.toString().padStart(2, '0')}</option>)}
         </select>
         <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 9l-7 7-7-7" /></svg>
