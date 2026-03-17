@@ -17,9 +17,10 @@ export default {
           return;
         }
 
-        const campusName = registration.campus?.name || 'Hải Phòng';
-        const eduLevel = registration.educationLevel?.name || 'Cao đẳng';
-        const major = registration.choice1Major || 'Đã chọn';
+        const regData = registration as any;
+        const campusName = regData.campus?.name || 'Hải Phòng';
+        const eduLevel = regData.educationLevel?.name || 'Cao đẳng';
+        const major = regData.choice1Major || 'Đã chọn';
 
         const htmlContent = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
