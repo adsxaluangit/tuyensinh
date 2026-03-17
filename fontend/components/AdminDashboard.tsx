@@ -965,7 +965,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const handleExportTuitionExcel = () => {
     if (submissions.length === 0) return alert('Không có dữ liệu!');
-    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Ngành học', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc thu tiền', 'Ngày thu tiền'];
+    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Ngành học', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc người thu tiền', 'Ngày nộp', 'Ngày thu chi tiết'];
     const rows = approvedSubmissions.map((s, idx) => {
       const hAmount = s.isHealthSelected ? (s.healthAmount || 0) : 0;
       const cAmount = s.isComprehensiveSelected ? (s.comprehensiveAmount || 0) : 0;
@@ -976,7 +976,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         idx + 1,
         `'${s.idNumber}`,
         s.fullName,
-        s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
+        s.dob ? (() => {
+          const d = new Date(s.dob);
+          return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+        })() : '',
         s.pob || '',
         s.ethnicity || '',
         `'${s.phone}`,
@@ -988,11 +991,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         hAmount,
         cAmount,
         uAmount,
-        (s.tuitionPaidAmount || 0),
+        s.tuitionPaidAmount || 0,
         remaining > 0 ? remaining : 0,
         s.tuitionStatus || TuitionStatus.UNPAID,
         s.paymentMethod || '',
         s.collectorAccount || '',
+        s.collectedDate ? (() => {
+          const d = new Date(s.collectedDate);
+          return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+        })() : '',
         s.collectedDate ? new Date(s.collectedDate).toLocaleString('vi-VN') : ''
       ];
     });
@@ -1654,7 +1661,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                               onUpdate={async (paid, status) => {
                                 try {
                                   const now = new Date().toISOString();
-                                  const collector = user.username;
+                                  const collector = user.fullName || user.username;
                                   setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now } : item));
                                   await api.updateRegistration(s.docId, { tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now });
                                 } catch (err) {
@@ -1671,7 +1678,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                             const newMethod = e.target.value;
                             try {
                               const now = new Date().toISOString();
-                              const collector = user.username;
+                              const collector = user.fullName || user.username;
                               setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod, collectorAccount: collector, collectedDate: now } : item));
                               await api.updateRegistration(s.docId, { paymentMethod: newMethod, collectorAccount: collector, collectedDate: now });
                             } catch (err) {
