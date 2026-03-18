@@ -1,5 +1,17 @@
 
 export default {
+  async afterCreate(event) {
+    const { result } = event;
+    try {
+      // Auto-publish on creation to avoid "Draft" records being hidden
+      await strapi.documents('api::registration.registration').publish({
+        documentId: result.documentId,
+      });
+      console.log(`Auto-published registration ${result.documentId}`);
+    } catch (error) {
+      console.error('Error auto-publishing registration:', error);
+    }
+  },
   async afterUpdate(event) {
     const { result, params } = event;
 

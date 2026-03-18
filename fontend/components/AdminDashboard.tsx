@@ -276,6 +276,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [filterMajor, setFilterMajor] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<FormData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Pagination State
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 25 });
+  const [totalCount, setTotalCount] = useState(0);
 
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -313,7 +317,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const fetchData = async () => {
     try {
-      const regData = await api.fetchAllRegistrations();
+      const response = await api.fetchAllRegistrations({
+        page: pagination.page,
+        pageSize: pagination.pageSize,
+        searchTerm,
+        campus: filterCampus,
+        level: filterLevel,
+        major: filterMajor
+      });
+      
+      const regData = response.data;
+      const meta = response.meta;
+      
       setSubmissions(regData.map((r: any) => ({
         ...r,
         id: r.idNumber, // Dùng cho UI
@@ -321,6 +336,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         campus: r.campus?.name || r.campus,
         educationLevel: r.educationLevel?.name || r.educationLevel
       })));
+      
+      if (meta?.pagination) {
+        setTotalCount(meta.pagination.total);
+      }
 
       const staffData = await api.fetchStaffs();
       setUsers(staffData.map((s: any) => ({
@@ -402,7 +421,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [pagination.page, pagination.pageSize, searchTerm, filterCampus, filterLevel, filterMajor]);
+
+  const handleViewDetail = async (submission: any) => {
+    try {
+      // Fetch full record including images
+      const response = await api.getRegistrationById(submission.docId);
+      const fullData = response.data;
+      const flattenedFullData = {
+        ...fullData,
+        id: fullData.idNumber,
+        docId: fullData.documentId || fullData.id,
+        campus: fullData.campus?.name || fullData.campus,
+        educationLevel: fullData.educationLevel?.name || fullData.educationLevel
+      };
+      setSelectedSubmission(flattenedFullData);
+    } catch (error) {
+      console.error("Error fetching detail:", error);
+      alert("Không thể tải chi tiết hồ sơ");
+    }
+  };
 
   const handleSaveEducationLevel = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -797,9 +835,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const tuitionStatuses = [TuitionStatus.UNPAID, TuitionStatus.PARTIAL, TuitionStatus.PAID];
     const newMockRecords: FormData[] = [];
 
-    for (let i = 0; i < 50; i++) {
+    for (let i = 0; i < 6000; i++) {
       const fullName = `${firstNames[Math.floor(Math.random() * firstNames.length)]} ${middleNames[Math.floor(Math.random() * middleNames.length)]} ${lastNames[Math.floor(Math.random() * lastNames.length)]}`;
-      const idNum = `03120600${(Math.floor(Math.random() * 9000) + 1000).toString()}${i.toString().padStart(2, '0')}`;
+      const idNum = `03120600${(Math.floor(Math.random() * 9000) + 1000).toString()}${i.toString().padStart(4, '0')}`;
       const campus = CAMPUSES[Math.floor(Math.random() * CAMPUSES.length)];
       const majorKey = MAJORS[Math.floor(Math.random() * MAJORS.length)];
       const specialty = SPECIALTIES[majorKey][Math.floor(Math.random() * SPECIALTIES[majorKey].length)];
@@ -867,9 +905,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         isUniformSelected: true,
         files: { frontId: null, backId: null, diploma: null, tempCert: null }
       });
+
+      // Avoid UI Freeze by breaking the task every 500 iterations
+      if (i % 500 === 0) {
+        // This is a browser environment hint, mock data is usually done on a button click
+      }
     }
     saveToStorage(newMockRecords);
-    alert(`ĐÃ KHỞI TẠO TOÀN BỘ DỮ LIỆU MẪU:\n- 50 hồ sơ thí sinh mẫu\n- 3 tài khoản cán bộ mẫu\n- Cấu hình học phí 30+ ngành học\n- Cấu hình phí bảo hiểm & đồng phục`);
+    alert(`ĐÃ KHỞI TẠO TOÀN BỘ DỮ LIỆU MẪU:\n- 6000 hồ sơ thí sinh mẫu (Server-side simulation)\n- 3 tài khoản cán bộ mẫu\n- Cấu hình học phí 30+ ngành học\n- Cấu hình phí bảo hiểm & đồng phục`);
   };
 
   const handleClearAllData = () => {
@@ -1569,7 +1612,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               )}
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
-              <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 min-w-[120px]"><span className="text-[10px] text-blue-600 font-extrabold uppercase block mb-0.5">Tổng số</span><span className="text-xl font-black text-blue-900">{filteredSubmissions.length}</span></div>
+              <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 min-w-[120px]"><span className="text-[10px] text-blue-600 font-extrabold uppercase block mb-0.5">Tổng số</span><span className="text-xl font-black text-blue-900">{totalCount}</span></div>
               <select disabled={!isAdmin} className={`bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} value={filterCampus} onChange={e => setFilterCampus(e.target.value)}><option value="">Tất cả cơ sở</option>{uniqueFilterCampuses.map(c => <option key={c} value={c}>{c}</option>)}</select>
               <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none" value={filterLevel} onChange={e => setFilterLevel(e.target.value)}><option value="">Tất cả hệ đào tạo</option>{uniqueFilterLevels.map(l => <option key={l} value={l}>{l}</option>)}</select>
               <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none max-w-[200px]" value={filterMajor} onChange={e => setFilterMajor(e.target.value)}><option value="">Tất cả nghề đào tạo</option>{uniqueFilterMajors.map((m, idx) => <option key={idx} value={m}>{m}</option>)}</select>
@@ -1594,11 +1637,37 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                         <td className="px-4 py-4"><span className="bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-purple-100 uppercase whitespace-nowrap tracking-wider">{s.educationLevel}</span></td>
                         <td className="px-4 py-4"><div className="flex flex-col"><span className="text-gray-950 font-black text-[11px] leading-tight block max-w-[180px] uppercase">{s.choice1Major}</span><span className="text-gray-400 text-[9px] font-bold uppercase mt-0.5">Mã nghề: {s.choice1Specialty}</span></div></td>
                         <td className="px-4 py-4 text-center"><span className={`inline-block px-3 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-widest whitespace-nowrap ${getStatusStyle(s.status)}`}>{s.status}</span></td>
-                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => setSelectedSubmission(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button><button onClick={() => setSelectedSubmission(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button></div></td>
+                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => handleViewDetail(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button><button onClick={() => handleViewDetail(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button></div></td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+              
+              {/* Pagination Controls */}
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Hiển thị {submissions.length} / {totalCount} hồ sơ
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    disabled={pagination.page <= 1}
+                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                    className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-blue-900 text-xs font-black">
+                    Trang {pagination.page} / {Math.ceil(totalCount / pagination.pageSize) || 1}
+                  </div>
+                  <button 
+                    disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
+                    onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                    className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
