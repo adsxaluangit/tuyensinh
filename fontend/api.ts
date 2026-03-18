@@ -116,7 +116,7 @@ export const findRegistrationByCCCD = async (cccd: string) => {
 };
 
 export const fetchAllRegistrations = async () => {
-    const data = await fetchAPI('/api/registrations?populate=*');
+    const data = await fetchAPI('/api/registrations?populate=*&pagination[pageSize]=1000');
     return data.data;
 };
 

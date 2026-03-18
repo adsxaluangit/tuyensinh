@@ -45,8 +45,24 @@ export default {
         }
         console.log('Cấp quyền thành công!');
       }
+
+      // Bulk publish existing draft registrations
+      const drafts = await strapi.documents('api::registration.registration').findMany({
+        status: 'draft',
+      });
+
+      if (drafts.length > 0) {
+        console.log(`Đang tự động xuất bản ${drafts.length} hồ sơ nháp...`);
+        for (const draft of drafts) {
+          await strapi.documents('api::registration.registration').publish({
+            documentId: draft.documentId,
+          });
+        }
+        console.log('Xuất bản thành công!');
+      }
+
     } catch (error) {
-      console.error('Lỗi cấp quyền bootstrap:', error);
+      console.error('Lỗi bootstrap:', error);
     }
   },
 };
