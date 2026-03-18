@@ -36,7 +36,7 @@ services:
       JWT_SECRET: "jwt123"
       NODE_ENV: production
       STRAPI_TELEMETRY_DISABLED: "true"
-      NODE_OPTIONS: "--max-old-space-size=2048"
+      NODE_OPTIONS: "--max-old-space-size=4096"
       SMTP_HOST: mail.mic1.edu.vn
       SMTP_PORT: 587
       SMTP_USERNAME: bantuyensinh@mic1.edu.vn

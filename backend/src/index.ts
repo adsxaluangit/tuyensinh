@@ -49,6 +49,7 @@ export default {
       // Bulk publish existing draft registrations
       const drafts = await strapi.documents('api::registration.registration').findMany({
         status: 'draft',
+        fields: ['id'], // Strapi 5 usually needs documentId, but limiting fields reduces memory
       });
 
       if (drafts.length > 0) {
