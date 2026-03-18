@@ -154,8 +154,6 @@ const App: React.FC = () => {
     const submissionData: any = {};
     Object.keys(cleanFormData).forEach(key => {
       const val = (cleanFormData as any)[key];
-      // Only send primitive values, arrays (for grades), or nulls. 
-      // Avoid sending nested objects (like campus, educationLevel) which we override below.
       if (val === null || typeof val !== 'object' || Array.isArray(val) || key === 'grades') {
         submissionData[key] = val;
       }
@@ -163,17 +161,18 @@ const App: React.FC = () => {
 
     Object.assign(submissionData, {
       ...files,
-      status: isEditing ? formData.status : 'Chờ Duyệt',
+      status: isEditing ? (formData as any).status : 'Chờ Duyệt',
       tuitionAmount: selectedOcc?.amount || 0,
       healthAmount: healthConfig?.amount || 0,
       comprehensiveAmount: compConfig?.amount || 0,
       uniformAmount: uniformConfig?.amount || 0,
-      tuitionPaidAmount: formData.tuitionPaidAmount || 0,
+      tuitionPaidAmount: (formData as any).tuitionPaidAmount || 0,
       isHealthSelected: true,
       isComprehensiveSelected: true,
       isUniformSelected: true,
       campus: campusObj?.id,
-      educationLevel: levelObj?.id
+      educationLevel: levelObj?.id,
+      grades: grades // Ensure grades is explicitly included
     });
 
     try {
@@ -192,7 +191,7 @@ const App: React.FC = () => {
       window.location.reload();
     } catch (error) {
       console.error("Error submitting to Strapi:", error);
-      alert('Có lỗi xảy ra khi gửi hồ sơ. Vui lòng thử lại.');
+      alert('Có lỗi xảy ra: ' + (error instanceof Error ? error.message : 'Vui lòng kiểm tra lại các trường thông tin.'));
     }
   };
 
