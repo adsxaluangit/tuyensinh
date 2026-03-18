@@ -1604,12 +1604,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 <h2 className="text-3xl font-black text-blue-950 tracking-tight">Hồ sơ đăng ký</h2>
                 <p className="text-gray-500 text-sm font-medium mt-1">Quản lý và xét tuyển hồ sơ thí sinh trực tuyến</p>
               </div>
-              {isAdmin && (
-                <div className="flex gap-3">
-                  <button onClick={handleClearAllData} className="px-4 py-2 bg-white text-red-600 border border-red-100 rounded-xl text-sm font-bold shadow-sm hover:bg-red-50 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2m-3 0h10" /></svg>Xóa sạch dữ liệu</button>
-                  <button onClick={seedMockData} className="px-4 py-2 bg-white text-blue-900 border border-gray-200 rounded-xl text-sm font-bold shadow-sm hover:shadow-md transition-all flex items-center gap-2"><svg className="w-4 h-4 text-orange-500" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 106.464 5.05l-.707-.707a1 1 0 00-1.414 1.414l.707.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 112 0v1a1 1 0 11-2 0zM13.536 14.95a1 1 0 010-1.414l.707-.707a1 1 0 011.414 1.414l-.707.707a1 1 0 01-1.414 0zM6.464 14.95a1 1 0 01-1.414 0l-.707-.707a1 1 0 011.414-1.414l.707.707a1 1 0 010 1.414z" /></svg>Tạo dữ liệu mẫu</button>
-                </div>
-              )}
+
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
               <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 min-w-[120px]"><span className="text-[10px] text-blue-600 font-extrabold uppercase block mb-0.5">Tổng số</span><span className="text-xl font-black text-blue-900">{totalCount}</span></div>
