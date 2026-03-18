@@ -115,9 +115,34 @@ export const findRegistrationByCCCD = async (cccd: string) => {
     return data.data[0];
 };
 
-export const fetchAllRegistrations = async () => {
-    const data = await fetchAPI('/api/registrations?populate=*&pagination[pageSize]=1000');
-    return data.data;
+export const fetchAllRegistrations = async (params: { 
+    page?: number, 
+    pageSize?: number, 
+    searchTerm?: string,
+    campus?: string,
+    level?: string,
+    major?: string
+} = {}) => {
+    const { page = 1, pageSize = 25, searchTerm, campus, level, major } = params;
+    
+    // Base URL with essential fields only (avoiding large base64 strings in list view)
+    let url = `/api/registrations?populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
+    
+    // Limit fields for list view performance
+    url += `&fields[0]=fullName&fields[1]=dob&fields[2]=gender&fields[3]=idNumber&fields[4]=phone&fields[5]=email&fields[6]=campus&fields[7]=educationLevel&fields[8]=choice1Major&fields[9]=choice1Specialty&fields[10]=status&fields[11]=tuitionStatus&fields[12]=tuitionAmount&fields[13]=tuitionPaidAmount&fields[14]=submissionDate`;
+
+    if (searchTerm) {
+        url += `&filters[$or][0][fullName][$contains]=${searchTerm}&filters[$or][1][phone][$contains]=${searchTerm}&filters[$or][2][idNumber][$contains]=${searchTerm}`;
+    }
+    if (campus) url += `&filters[campus][name][$eq]=${campus}`;
+    if (level) url += `&filters[educationLevel][name][$eq]=${level}`;
+    if (major) url += `&filters[choice1Major][$eq]=${major}`;
+
+    return await fetchAPI(url);
+};
+
+export const getRegistrationById = async (documentId: string) => {
+    return await fetchAPI(`/api/registrations/${documentId}?populate=*`);
 };
 
 export const deleteRegistration = async (documentId: string) => {
