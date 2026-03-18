@@ -131,7 +131,7 @@ export const fetchAllRegistrations = async (params: {
     let url = `/api/registrations?populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
     
     // Limit fields for list view performance
-    url += `&fields[0]=fullName&fields[1]=dob&fields[2]=gender&fields[3]=idNumber&fields[4]=phone&fields[5]=email&fields[6]=choice1Major&fields[7]=choice1Specialty&fields[8]=status&fields[9]=tuitionStatus&fields[10]=tuitionAmount&fields[11]=tuitionPaidAmount&fields[12]=submissionDate`;
+    url += `&fields[0]=fullName&fields[1]=dob&fields[2]=gender&fields[3]=idNumber&fields[4]=phone&fields[5]=email&fields[6]=choice1Major&fields[7]=choice1Specialty&fields[8]=status&fields[9]=tuitionStatus&fields[10]=tuitionAmount&fields[11]=tuitionPaidAmount&fields[12]=createdAt`;
 
     if (searchTerm) {
         url += `&filters[$or][0][fullName][$contains]=${searchTerm}&filters[$or][1][phone][$contains]=${searchTerm}&filters[$or][2][idNumber][$contains]=${searchTerm}`;
