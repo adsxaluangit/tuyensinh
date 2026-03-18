@@ -46,6 +46,7 @@ export default {
         console.log('Cấp quyền thành công!');
       }
 
+      /*
       // Bulk publish existing draft registrations in background
       setTimeout(async () => {
         try {
@@ -61,14 +62,15 @@ export default {
                 documentId: draft.documentId,
               });
               // Small pause to avoid overwhelming the system
-              await new Promise(resolve => setTimeout(resolve, 100));
+              await new Promise(resolve => setTimeout(resolve, 500));
             }
             console.log('[Background] Xuất bản thành công!');
           }
         } catch (err) {
           console.error('[Background] Lỗi xuất bản hồ sơ:', err);
         }
-      }, 5000);
+      }, 30000); // 30s delay
+      */
 
     } catch (error) {
       console.error('Lỗi bootstrap:', error);

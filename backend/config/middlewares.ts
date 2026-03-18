@@ -17,10 +17,10 @@ export default [
   {
     name: 'strapi::body',
     config: {
-      formLimit: '50mb',
-      jsonLimit: '50mb',
-      textLimit: '50mb',
-      xmlLimit: '50mb',
+      formLimit: '20mb',
+      jsonLimit: '20mb',
+      textLimit: '20mb',
+      xmlLimit: '20mb',
     },
   },
   'strapi::session',
