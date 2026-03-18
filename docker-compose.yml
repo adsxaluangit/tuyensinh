@@ -58,7 +58,7 @@ services:
       context: ./fontend
       dockerfile: Dockerfile
       args:
-        - VITE_STRAPI_URL=http://tuyensinh1.mic1.edu.vn:82
+        - VITE_STRAPI_URL=http://tuyensinh1.mic1.edu.vn:1338
     container_name: tuyensinh-frontend
     restart: unless-stopped
     ports:

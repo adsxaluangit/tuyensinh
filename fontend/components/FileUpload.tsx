@@ -15,6 +15,15 @@ const FileUpload: React.FC<FileUploadProps> = ({ label, required, placeholderIma
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // Limit file size to 2MB
+      const maxSize = 2 * 1024 * 1024;
+      if (file.size > maxSize) {
+        alert('Dung lượng ảnh quá lớn! Vui lòng chọn ảnh dưới 2MB.');
+        e.target.value = ''; // Reset input
+        return;
+      }
+
       setFileName(file.name);
       const reader = new FileReader();
       reader.onload = () => {
