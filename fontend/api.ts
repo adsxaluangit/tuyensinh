@@ -1,6 +1,6 @@
 
 const STRAPI_URL = (import.meta.env.PROD && !window.location.hostname.includes('localhost')) 
-    ? '/api' 
+    ? '' 
     : (import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337');
 
 const fetchAPI = async (path: string, options?: RequestInit) => {
