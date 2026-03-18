@@ -46,6 +46,7 @@ export default {
         console.log('Cấp quyền thành công!');
       }
 
+      /*
       // Bulk publish existing draft registrations
       const drafts = await strapi.documents('api::registration.registration').findMany({
         status: 'draft',
@@ -61,6 +62,7 @@ export default {
         }
         console.log('Xuất bản thành công!');
       }
+      */
 
     } catch (error) {
       console.error('Lỗi bootstrap:', error);
