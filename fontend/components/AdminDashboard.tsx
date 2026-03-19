@@ -999,12 +999,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       s.deliveryAddressDetails
     ]);
 
-    const excelHtml = `<html><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
-    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Danh_sach_tuyen_sinh_CHI_TIET_${Date.now()}.xls`;
-    link.click();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DanhSachTuyenSinh");
+    XLSX.writeFile(wb, `Danh_sach_tuyen_sinh_${Date.now()}.xlsx`);
   };
 
   const handleExportTuitionExcel = () => {
@@ -1047,12 +1045,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         s.collectedDate ? new Date(s.collectedDate).toLocaleString('vi-VN') : ''
       ];
     });
-    const excelHtml = `<html><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
-    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Danh_sach_hoc_phi_${Date.now()}.xls`;
-    link.click();
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "QuanLyHocPhi");
+    XLSX.writeFile(wb, `Danh_sach_hoc_phi_${Date.now()}.xlsx`);
   };
 
   const toggleSelectAll = () => {
