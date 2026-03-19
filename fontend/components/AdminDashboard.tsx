@@ -137,7 +137,7 @@ const FilePreviewItem = ({ label, src }: { label: string, src: string | null }) 
         <>
           <img src={src} alt={label} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
           <div className="absolute inset-0 bg-blue-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-sm">
-            <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] border-2 border-white/40 px-5 py-2.5 rounded-2xl">Xem văn bản</span>
+            <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] border-2 border-white/40 px-5 py-2.5 rounded-2xl">Xem ảnh</span>
           </div>
         </>
       ) : (
