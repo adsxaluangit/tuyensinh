@@ -4,7 +4,16 @@ const STRAPI_URL = (import.meta.env.PROD && !window.location.hostname.includes('
     : (import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337');
 
 const fetchAPI = async (path: string, options?: RequestInit) => {
-    const response = await fetch(`${STRAPI_URL}${path}`, {
+    // Ensure path doesn't have a leading slash
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    
+    // If STRAPI_URL is empty (production), use a relative path without a leading slash
+    // If it's not empty, combine with a slash
+    const url = STRAPI_URL ? `${STRAPI_URL}/${cleanPath}` : cleanPath;
+    
+    console.log(`Fetching: ${url}`);
+    
+    const response = await fetch(url, {
         ...options,
         headers: {
             'Content-Type': 'application/json',
@@ -12,8 +21,20 @@ const fetchAPI = async (path: string, options?: RequestInit) => {
         },
     });
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error?.error?.message || 'API Error');
+        let errorMessage = 'API Error';
+        try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                errorMessage = error?.error?.message || errorMessage;
+            } else {
+                const text = await response.text();
+                errorMessage = `Server Error: ${response.status} ${response.statusText}. ${text.slice(0, 100)}...`;
+            }
+        } catch (e) {
+            errorMessage = `Network or Parsing Error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
     }
     if (response.status === 204) return null;
     return await response.json();
@@ -86,35 +107,35 @@ export const createOccupation = async (occupationData: any) => {
 };
 
 export const updateOccupation = async (documentId: string, occupationData: any) => {
-    return await fetchAPI(`/api/occupations/${documentId}`, {
+    return await fetchAPI('api/occupations/' + documentId, {
         method: 'PUT',
         body: JSON.stringify({ data: occupationData }),
     });
 };
 
 export const deleteOccupation = async (documentId: string) => {
-    return await fetchAPI(`/api/occupations/${documentId}`, {
+    return await fetchAPI('api/occupations/' + documentId, {
         method: 'DELETE',
     });
 };
 
 export const submitRegistration = async (formData: any) => {
-    return await fetchAPI('/api/registrations', {
+    return await fetchAPI('api/registrations', {
         method: 'POST',
         body: JSON.stringify({ data: formData }),
     });
 };
 
 export const updateRegistration = async (documentId: string, formData: any) => {
-    return await fetchAPI(`/api/registrations/${documentId}`, {
+    return await fetchAPI('api/registrations/' + documentId, {
         method: 'PUT',
         body: JSON.stringify({ data: formData }),
     });
 };
 
 export const findRegistrationByCCCD = async (cccd: string) => {
-    const data = await fetchAPI(`/api/registrations?filters[idNumber][$eq]=${cccd}&populate=*`);
-    return data.data[0];
+    const data = await fetchAPI(`api/registrations?filters[idNumber][$eq]=${cccd}&populate=*`);
+    return data && data.data ? data.data[0] : null;
 };
 
 export const fetchAllRegistrations = async (params: { 
@@ -128,7 +149,7 @@ export const fetchAllRegistrations = async (params: {
     const { page = 1, pageSize = 25, searchTerm, campus, level, major } = params;
     
     // Base URL with essential fields only (avoiding large base64 strings in list view)
-    let url = `/api/registrations?populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
+    let url = `api/registrations?populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
     
     // Limit fields for list view performance
     url += `&fields[0]=fullName&fields[1]=dob&fields[2]=gender&fields[3]=idNumber&fields[4]=phone&fields[5]=email&fields[6]=choice1Major&fields[7]=choice1Specialty&fields[8]=status&fields[9]=tuitionStatus&fields[10]=tuitionAmount&fields[11]=tuitionPaidAmount&fields[12]=createdAt`;
