@@ -374,7 +374,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           id: o.documentId || o.id,
           code: item.code,
           name: item.name,
-          amount: item.amount,
+          amount: (item.amount !== undefined && item.amount !== null) ? item.amount : (item.attributes?.amount || 0),
           campus: campusObj?.name || campusObj,
           educationLevel: levelObj?.name || levelObj
         };
@@ -385,7 +385,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         id: h.documentId || h.id,
         code: h.code || h.attributes?.code,
         description: h.description || h.attributes?.description,
-        amount: h.amount || h.attributes?.amount
+        amount: (h.amount !== undefined && h.amount !== null) ? h.amount : (h.attributes?.amount || 0)
       })));
 
       const compData = await api.fetchComprehensiveInsurances();
@@ -393,7 +393,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         id: c.documentId || c.id,
         code: c.code || c.attributes?.code,
         description: c.description || c.attributes?.description,
-        amount: c.amount || c.attributes?.amount
+        amount: (c.amount !== undefined && c.amount !== null) ? c.amount : (c.attributes?.amount || 0)
       })));
 
       const uniformData = await api.fetchUniforms();
@@ -401,7 +401,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         id: u.documentId || u.id,
         code: u.code || u.attributes?.code,
         description: u.description || u.attributes?.description,
-        amount: u.amount || u.attributes?.amount
+        amount: (u.amount !== undefined && u.amount !== null) ? u.amount : (u.attributes?.amount || 0)
       })));
 
       const templateData = await api.fetchAdmissionTemplates();
@@ -999,12 +999,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       s.deliveryAddressDetails
     ]);
 
-    const excelHtml = `<html><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
-    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Danh_sach_tuyen_sinh_CHI_TIET_${Date.now()}.xls`;
-    link.click();
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "DanhSachTuyenSinh");
+    XLSX.writeFile(wb, `Danh_sach_tuyen_sinh_${Date.now()}.xlsx`);
   };
 
   const handleExportTuitionExcel = () => {
@@ -1047,12 +1045,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         s.collectedDate ? new Date(s.collectedDate).toLocaleString('vi-VN') : ''
       ];
     });
-    const excelHtml = `<html><head><meta charset="UTF-8"></head><body><table border="1"><thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
-    const blob = new Blob([excelHtml], { type: 'application/vnd.ms-excel' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = `Danh_sach_hoc_phi_${Date.now()}.xls`;
-    link.click();
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "QuanLyHocPhi");
+    XLSX.writeFile(wb, `Danh_sach_hoc_phi_${Date.now()}.xlsx`);
   };
 
   const toggleSelectAll = () => {
@@ -1074,7 +1071,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       for (const id of idsToUpdate) {
         const sub = submissions.find(s => s.id === id);
         if (sub?.docId) {
-          await api.updateRegistration(sub.docId, { status });
+          await api.updateRegistration(sub.docId, { 
+            status,
+            syncAmounts: status === SubmissionStatus.APPROVED 
+          });
         }
       }
       fetchData();
@@ -1110,10 +1110,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const updateCurrentSubmissionStatus = async (status: SubmissionStatus) => {
     if (!selectedSubmission?.docId) return;
     try {
-      await api.updateRegistration(selectedSubmission.docId, { status });
-      setSelectedSubmission({ ...selectedSubmission, status });
-      const updated = submissions.map(s => s.id === selectedSubmission.id ? { ...s, status } : s);
-      saveToStorage(updated);
+      await api.updateRegistration(selectedSubmission.docId, { 
+        status,
+        syncAmounts: status === SubmissionStatus.APPROVED 
+      });
+      // Re-fetch data to reflect newly synced amounts
+      await fetchData();
+      // Also update local selected submission if possible
+      const refreshed = await api.getRegistrationById(selectedSubmission.docId);
+      if (refreshed?.data) {
+        setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId }));
+      }
     } catch (error) {
       alert("Lỗi khi cập nhật trạng thái");
     }
@@ -1131,10 +1138,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       try {
         await api.updateRegistration(selectedSubmission.docId, {
           docSeq: currentSeq,
-          status: SubmissionStatus.APPROVED
+          status: SubmissionStatus.APPROVED,
+          syncAmounts: true
         });
-        setSelectedSubmission({ ...selectedSubmission, docSeq: currentSeq, status: SubmissionStatus.APPROVED });
-        fetchData();
+        
+        // Re-fetch data
+        await fetchData();
+        
+        // Update local object
+        const refreshed = await api.getRegistrationById(selectedSubmission.docId);
+        if (refreshed?.data) {
+           setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId, docSeq: currentSeq, status: SubmissionStatus.APPROVED }));
+        }
       } catch (error) {
         alert("Lỗi khi cập nhật hồ sơ trúng tuyển");
         return;

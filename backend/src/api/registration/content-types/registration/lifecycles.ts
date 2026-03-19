@@ -6,8 +6,12 @@ export default {
     const { data, where } = params;
     
 
-    // Check if status is transitioning to "Trúng tuyển" or sync is requested
-    if (data && (data.status === 'Trúng tuyển' || data.syncAmounts)) {
+    // Extract and handle the sync flag immediately to avoid validation errors
+    const syncAmounts = data?.syncAmounts;
+    if (data) delete data.syncAmounts;
+
+    // Check if status is transitioning to "Trúng tuyển" or sync was requested
+    if (data && (data.status === 'Trúng tuyển' || syncAmounts)) {
       try {
         const documentId = where?.documentId || params?.documentId;
         const id = where?.id;
@@ -32,20 +36,34 @@ export default {
         }
 
 
-        // Only populate amounts if transitioning from another status to "Trúng tuyển" or sync is requested
-        if (existing && (existing.status !== 'Trúng tuyển' || data.syncAmounts)) {
+        // Only populate amounts if transitioning from another status to "Trúng tuyển" or sync was requested
+        if (existing && (existing.status !== 'Trúng tuyển' || syncAmounts)) {
           console.log(`[Lifecycle] Status changing to "Trúng tuyển" for ${existing.idNumber}. Populating amounts...`);
 
           // 1. Fetch Tuition Amount based on Major, Campus and EduLevel
           const occupationFilters: any = {
-            name: existing.choice1Major
+            name: { $eq: existing.choice1Major }
           };
           
           if (existing.campus) {
-            occupationFilters.campus = existing.campus.documentId || existing.campus.id;
+             const campusDocId = existing.campus.documentId || (typeof existing.campus === 'string' ? existing.campus : null);
+             const campusId = existing.campus.id || (typeof existing.campus === 'number' ? existing.campus : null);
+             
+             if (campusDocId) {
+                 occupationFilters.campus = { documentId: { $eq: campusDocId } };
+             } else if (campusId) {
+                 occupationFilters.campus = { id: { $eq: campusId } };
+             }
           }
           if (existing.educationLevel) {
-            occupationFilters.educationLevel = existing.educationLevel.documentId || existing.educationLevel.id;
+             const levelDocId = existing.educationLevel.documentId || (typeof existing.educationLevel === 'string' ? existing.educationLevel : null);
+             const levelId = existing.educationLevel.id || (typeof existing.educationLevel === 'number' ? existing.educationLevel : null);
+             
+             if (levelDocId) {
+                 occupationFilters.educationLevel = { documentId: { $eq: levelDocId } };
+             } else if (levelId) {
+                 occupationFilters.educationLevel = { id: { $eq: levelId } };
+             }
           }
 
           const occupations = await strapi.documents('api::occupation.occupation').findMany({
