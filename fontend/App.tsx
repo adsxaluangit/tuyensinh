@@ -499,10 +499,10 @@ const App: React.FC = () => {
 
           <FormSection title="TẢI LÊN GIẤY TỜ XÁC THỰC">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
-              <FileUpload label="CCCD mặt trước" required placeholderImage={files.frontId || "https://picsum.photos/400/250?random=1"} onFileChange={(b64) => setFiles({ ...files, frontId: b64 })} />
-              <FileUpload label="CCCD mặt sau" required placeholderImage={files.backId || "https://picsum.photos/400/250?random=2"} onFileChange={(b64) => setFiles({ ...files, backId: b64 })} />
-              <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "https://picsum.photos/400/250?random=3"} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
-              <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "https://picsum.photos/400/250?random=4"} onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
+              <FileUpload label="CCCD mặt trước" required placeholderImage={files.frontId || "/assets/cccd_front.png"} onFileChange={(b64) => setFiles({ ...files, frontId: b64 })} />
+              <FileUpload label="CCCD mặt sau" required placeholderImage={files.backId || "/assets/cccd_back.png"} onFileChange={(b64) => setFiles({ ...files, backId: b64 })} />
+              <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "/assets/diploma.png"} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
+              <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "/assets/transcript.png"} onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
             </div>
           </FormSection>
 
