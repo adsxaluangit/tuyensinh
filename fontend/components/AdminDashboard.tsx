@@ -1074,7 +1074,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       for (const id of idsToUpdate) {
         const sub = submissions.find(s => s.id === id);
         if (sub?.docId) {
-          await api.updateRegistration(sub.docId, { status });
+          await api.updateRegistration(sub.docId, { 
+            status,
+            syncAmounts: status === SubmissionStatus.APPROVED 
+          });
         }
       }
       fetchData();
@@ -1110,10 +1113,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const updateCurrentSubmissionStatus = async (status: SubmissionStatus) => {
     if (!selectedSubmission?.docId) return;
     try {
-      await api.updateRegistration(selectedSubmission.docId, { status });
-      setSelectedSubmission({ ...selectedSubmission, status });
-      const updated = submissions.map(s => s.id === selectedSubmission.id ? { ...s, status } : s);
-      saveToStorage(updated);
+      await api.updateRegistration(selectedSubmission.docId, { 
+        status,
+        syncAmounts: status === SubmissionStatus.APPROVED 
+      });
+      // Re-fetch data to reflect newly synced amounts
+      await fetchData();
+      // Also update local selected submission if possible
+      const refreshed = await api.getRegistrationById(selectedSubmission.docId);
+      if (refreshed?.data) {
+        setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId }));
+      }
     } catch (error) {
       alert("Lỗi khi cập nhật trạng thái");
     }
@@ -1131,10 +1141,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       try {
         await api.updateRegistration(selectedSubmission.docId, {
           docSeq: currentSeq,
-          status: SubmissionStatus.APPROVED
+          status: SubmissionStatus.APPROVED,
+          syncAmounts: true
         });
-        setSelectedSubmission({ ...selectedSubmission, docSeq: currentSeq, status: SubmissionStatus.APPROVED });
-        fetchData();
+        
+        // Re-fetch data
+        await fetchData();
+        
+        // Update local object
+        const refreshed = await api.getRegistrationById(selectedSubmission.docId);
+        if (refreshed?.data) {
+           setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId, docSeq: currentSeq, status: SubmissionStatus.APPROVED }));
+        }
       } catch (error) {
         alert("Lỗi khi cập nhật hồ sơ trúng tuyển");
         return;
