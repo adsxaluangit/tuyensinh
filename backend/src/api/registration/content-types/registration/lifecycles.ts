@@ -6,8 +6,8 @@ export default {
     const { data, where } = params;
     
 
-    // Check if status is transitioning to "Trúng tuyển"
-    if (data && data.status === 'Trúng tuyển') {
+    // Check if status is transitioning to "Trúng tuyển" or sync is requested
+    if (data && (data.status === 'Trúng tuyển' || data.syncAmounts)) {
       try {
         const documentId = where?.documentId || params?.documentId;
         const id = where?.id;
@@ -32,8 +32,8 @@ export default {
         }
 
 
-        // Only populate amounts if transitioning from another status to "Trúng tuyển"
-        if (existing && existing.status !== 'Trúng tuyển') {
+        // Only populate amounts if transitioning from another status to "Trúng tuyển" or sync is requested
+        if (existing && (existing.status !== 'Trúng tuyển' || data.syncAmounts)) {
           console.log(`[Lifecycle] Status changing to "Trúng tuyển" for ${existing.idNumber}. Populating amounts...`);
 
           // 1. Fetch Tuition Amount based on Major, Campus and EduLevel

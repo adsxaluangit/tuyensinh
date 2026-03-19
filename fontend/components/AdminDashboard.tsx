@@ -184,6 +184,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>('submissions');
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
   const [admissionSubTab, setAdmissionSubTab] = useState<'Hải Phòng' | 'Nam Đồng' | 'Đinh Nhu' | 'Thu học phí'>('Hải Phòng');
+  const [isLoading, setIsLoading] = useState(false);
 
   const [submissions, setSubmissions] = useState<FormData[]>([]);
   const [users, setUsers] = useState<User[]>([]);
@@ -1265,6 +1266,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     printWindow.document.close();
   };
 
+  const handleSyncTuitionFromConfig = async () => {
+    if (approvedSubmissions.length === 0) return alert('Không có dữ liệu trúng tuyển!');
+    if (!window.confirm(`Bạn có chắc muốn đồng bộ lại học phí và bảo hiểm cho ${approvedSubmissions.length} thí sinh từ cấu hình hệ thống?`)) return;
+    
+    setIsLoading(true);
+    let successCount = 0;
+    try {
+      for (const sub of approvedSubmissions) {
+        if (sub.docId) {
+          await api.updateRegistration(sub.docId, { syncAmounts: true });
+          successCount++;
+        }
+      }
+      alert(`Đã đồng bộ thành công cho ${successCount} hồ sơ.`);
+      fetchData();
+    } catch (error) {
+      console.error("Lỗi đồng bộ:", error);
+      alert("Có lỗi xảy ra trong quá trình đồng bộ.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handlePrintBlankTemplate = () => {
     const template = admissionTemplates[admissionSubTab];
     const dummySubmission: any = {
@@ -1676,6 +1700,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
               <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[120px]"><span className="text-[10px] text-emerald-600 font-extrabold uppercase block mb-0.5">Trúng tuyển</span><span className="text-xl font-black text-emerald-900">{approvedSubmissions.length}</span></div>
+              <button 
+                onClick={handleSyncTuitionFromConfig} 
+                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                disabled={isLoading}
+              >
+                <svg className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {isLoading ? 'Đang đồng bộ...' : 'Đồng bộ từ cấu hình'}
+              </button>
               <button onClick={handleExportTuitionExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
               <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
             </div>
