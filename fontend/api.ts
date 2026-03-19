@@ -175,6 +175,25 @@ export const fetchAllRegistrations = async (params: {
     return await fetchAPI(url);
 };
 
+export const fetchAllApprovedRegistrations = async () => {
+    let url = `api/registrations?populate=*&pagination[pageSize]=10000&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc`;
+    
+    const fieldNames = [
+        'fullName', 'dob', 'pob', 'gender', 'ethnicity', 'idNumber', 'issueDate', 'issuePlace',
+        'phone', 'email', 'addressDetails', 'province', 'district',
+        'parentName', 'parentPhone', 
+        'choice1Major', 'choice1Specialty', 'choice2Major', 'choice2Specialty',
+        'gradSchool', 'gradYear', 'diplomaNumber',
+        'recipient', 'deliveryAddress', 'deliveryAddressDetails',
+        'status', 'tuitionStatus', 'tuitionAmount', 'healthAmount', 'comprehensiveAmount', 'uniformAmount', 
+        'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 
+        'docSeq', 'paymentMethod', 'collectorAccount', 'collectedDate', 'createdAt'
+    ];
+    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('');
+
+    return await fetchAPI(url);
+};
+
 export const getRegistrationById = async (documentId: string) => {
     return await fetchAPI(`/api/registrations/${documentId}?populate=*`);
 };
