@@ -4,7 +4,13 @@ const STRAPI_URL = (import.meta.env.PROD && !window.location.hostname.includes('
     : (import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337');
 
 const fetchAPI = async (path: string, options?: RequestInit) => {
-    const response = await fetch(`${STRAPI_URL}${path}`, {
+    // Ensure path doesn't have a leading slash if STRAPI_URL is empty
+    const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+    const url = `${STRAPI_URL}/${cleanPath}`;
+    
+    console.log(`Fetching: ${url}`);
+    
+    const response = await fetch(url, {
         ...options,
         headers: {
             'Content-Type': 'application/json',
@@ -98,35 +104,35 @@ export const createOccupation = async (occupationData: any) => {
 };
 
 export const updateOccupation = async (documentId: string, occupationData: any) => {
-    return await fetchAPI(`/api/occupations/${documentId}`, {
+    return await fetchAPI('api/occupations/' + documentId, {
         method: 'PUT',
         body: JSON.stringify({ data: occupationData }),
     });
 };
 
 export const deleteOccupation = async (documentId: string) => {
-    return await fetchAPI(`/api/occupations/${documentId}`, {
+    return await fetchAPI('api/occupations/' + documentId, {
         method: 'DELETE',
     });
 };
 
 export const submitRegistration = async (formData: any) => {
-    return await fetchAPI('/api/registrations', {
+    return await fetchAPI('api/registrations', {
         method: 'POST',
         body: JSON.stringify({ data: formData }),
     });
 };
 
 export const updateRegistration = async (documentId: string, formData: any) => {
-    return await fetchAPI(`/api/registrations/${documentId}`, {
+    return await fetchAPI('api/registrations/' + documentId, {
         method: 'PUT',
         body: JSON.stringify({ data: formData }),
     });
 };
 
 export const findRegistrationByCCCD = async (cccd: string) => {
-    const data = await fetchAPI(`/api/registrations?filters[idNumber][$eq]=${cccd}&populate=*`);
-    return data.data[0];
+    const data = await fetchAPI(`api/registrations?filters[idNumber][$eq]=${cccd}&populate=*`);
+    return data && data.data ? data.data[0] : null;
 };
 
 export const fetchAllRegistrations = async (params: { 
@@ -140,7 +146,7 @@ export const fetchAllRegistrations = async (params: {
     const { page = 1, pageSize = 25, searchTerm, campus, level, major } = params;
     
     // Base URL with essential fields only (avoiding large base64 strings in list view)
-    let url = `/api/registrations?populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
+    let url = `api/registrations?populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
     
     // Limit fields for list view performance
     url += `&fields[0]=fullName&fields[1]=dob&fields[2]=gender&fields[3]=idNumber&fields[4]=phone&fields[5]=email&fields[6]=choice1Major&fields[7]=choice1Specialty&fields[8]=status&fields[9]=tuitionStatus&fields[10]=tuitionAmount&fields[11]=tuitionPaidAmount&fields[12]=createdAt`;
