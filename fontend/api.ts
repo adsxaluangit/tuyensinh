@@ -4,9 +4,12 @@ const STRAPI_URL = (import.meta.env.PROD && !window.location.hostname.includes('
     : (import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337');
 
 const fetchAPI = async (path: string, options?: RequestInit) => {
-    // Ensure path doesn't have a leading slash if STRAPI_URL is empty
+    // Ensure path doesn't have a leading slash
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
-    const url = `${STRAPI_URL}/${cleanPath}`;
+    
+    // If STRAPI_URL is empty (production), use a relative path without a leading slash
+    // If it's not empty, combine with a slash
+    const url = STRAPI_URL ? `${STRAPI_URL}/${cleanPath}` : cleanPath;
     
     console.log(`Fetching: ${url}`);
     
