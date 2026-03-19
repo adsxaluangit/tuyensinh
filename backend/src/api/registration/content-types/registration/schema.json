@@ -195,6 +195,9 @@
         },
         "collectedDate": {
             "type": "datetime"
+        },
+        "syncAmounts": {
+            "type": "boolean"
         }
     }
 }
