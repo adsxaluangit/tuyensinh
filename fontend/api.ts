@@ -153,8 +153,8 @@ export const fetchAllRegistrations = async (params: {
     
     // Fetch all scalar fields but exclude large base64 strings (frontId, backId, diploma, tempCert)
     const fieldNames = [
-        'fullName', 'dob', 'pob', 'gender', 'ethnicity', 'idNumber', 'documentType', 'issueDate', 'issuePlace',
-        'phone', 'email', 'addressDetails', 'province', 'district', 'ward',
+        'fullName', 'dob', 'pob', 'gender', 'ethnicity', 'idNumber', 'issueDate', 'issuePlace',
+        'phone', 'email', 'addressDetails', 'province', 'district',
         'parentName', 'parentPhone', 
         'choice1Major', 'choice1Specialty', 'choice2Major', 'choice2Specialty',
         'gradSchool', 'gradYear', 'diplomaNumber',
