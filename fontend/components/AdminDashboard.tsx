@@ -129,26 +129,53 @@ const DetailItem = ({ label, value, colSpan = 1, highlight = false }: { label: s
   </div>
 );
 
-const FilePreviewItem = ({ label, src }: { label: string, src: string | null }) => (
-  <div className="flex flex-col items-start gap-4 w-full">
-    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{label}</p>
-    <div className="w-full aspect-[4/3] bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100 overflow-hidden flex items-center justify-center group relative cursor-pointer hover:border-blue-400 hover:shadow-xl transition-all">
-      {src ? (
-        <>
-          <img src={src} alt={label} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
-          <div className="absolute inset-0 bg-blue-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-sm">
-            <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] border-2 border-white/40 px-5 py-2.5 rounded-2xl">Xem ảnh</span>
-          </div>
-        </>
-      ) : (
-        <div className="flex flex-col items-center gap-2">
-          <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-          <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest italic">Chưa tải lên</span>
+const FilePreviewItem = ({ label, src }: { label: string, src: string | null }) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <>
+      <div className="flex flex-col items-start gap-4 w-full">
+        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{label}</p>
+        <div 
+          className="w-full aspect-[4/3] bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100 overflow-hidden flex items-center justify-center group relative cursor-pointer hover:border-blue-400 hover:shadow-xl transition-all"
+          onClick={() => src && setIsOpen(true)}
+        >
+          {src ? (
+            <>
+              <img src={src} alt={label} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
+              <div className="absolute inset-0 bg-blue-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-sm">
+                <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] border-2 border-white/40 px-5 py-2.5 rounded-2xl">Xem ảnh</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center gap-2">
+              <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+              <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest italic">Chưa tải lên</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {isOpen && src && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out"
+          onClick={() => setIsOpen(false)}
+        >
+          <img src={src} alt={label} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
+          <button 
+            className="absolute top-6 right-6 text-white/50 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all"
+            onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
+            title="Đóng (Esc)"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
       )}
-    </div>
-  </div>
-);
+    </>
+  );
+};
 
 const TuitionPaidInput: React.FC<{
   initialValue: number;
