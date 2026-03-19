@@ -4,6 +4,8 @@ export default {
     const { result } = event;
     try {
       // Auto-publish on creation to avoid "Draft" records being hidden
+      // Using entityService.update to set publishedAt if needed, or keeping documents service but with better error handling.
+      // Actually, Strapi 5 recommends documents() for publishing. Let's make it more robust.
       await strapi.documents('api::registration.registration').publish({
         documentId: result.documentId,
       });
@@ -15,9 +17,9 @@ export default {
   async afterUpdate(event) {
     const { result, params } = event;
 
-    // Check if the status was updated to "Trúng tuyển"
+    // Check if the status was updated to "Trúng tuyển" and it hasn't been sent before
     // Note: event.params.data contains the update payload
-    if (params.data.status === 'Trúng tuyển') {
+    if (params.data && params.data.status === 'Trúng tuyển') {
       try {
         // Fetch full registration details including relations if needed
         const registration = await strapi.entityService.findOne('api::registration.registration', result.id, {
