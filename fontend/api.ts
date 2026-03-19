@@ -12,8 +12,20 @@ const fetchAPI = async (path: string, options?: RequestInit) => {
         },
     });
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error?.error?.message || 'API Error');
+        let errorMessage = 'API Error';
+        try {
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const error = await response.json();
+                errorMessage = error?.error?.message || errorMessage;
+            } else {
+                const text = await response.text();
+                errorMessage = `Server Error: ${response.status} ${response.statusText}. ${text.slice(0, 100)}...`;
+            }
+        } catch (e) {
+            errorMessage = `Network or Parsing Error: ${response.status} ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
     }
     if (response.status === 204) return null;
     return await response.json();
