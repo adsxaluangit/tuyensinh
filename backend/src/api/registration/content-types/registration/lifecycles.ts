@@ -1,5 +1,99 @@
 
+
 export default {
+  async beforeUpdate(event) {
+    const { params } = event;
+    const { data, where } = params;
+    
+
+    // Check if status is transitioning to "Trúng tuyển"
+    if (data && data.status === 'Trúng tuyển') {
+      try {
+        const documentId = where?.documentId || params?.documentId;
+        const id = where?.id;
+
+        let existing: any = null;
+        
+        if (documentId) {
+          existing = await strapi.documents('api::registration.registration').findOne({
+            documentId,
+            populate: ['campus', 'educationLevel']
+          });
+        } else if (id) {
+          existing = await strapi.db.query('api::registration.registration').findOne({
+            where: { id },
+            populate: ['campus', 'educationLevel']
+          });
+        }
+
+        if (!existing) {
+          console.log('[Lifecycle] beforeUpdate: Record not found', { documentId, id });
+          return;
+        }
+
+
+        // Only populate amounts if transitioning from another status to "Trúng tuyển"
+        if (existing && existing.status !== 'Trúng tuyển') {
+          console.log(`[Lifecycle] Status changing to "Trúng tuyển" for ${existing.idNumber}. Populating amounts...`);
+
+          // 1. Fetch Tuition Amount based on Major, Campus and EduLevel
+          const occupationFilters: any = {
+            name: existing.choice1Major
+          };
+          
+          if (existing.campus) {
+            occupationFilters.campus = existing.campus.documentId || existing.campus.id;
+          }
+          if (existing.educationLevel) {
+            occupationFilters.educationLevel = existing.educationLevel.documentId || existing.educationLevel.id;
+          }
+
+          const occupations = await strapi.documents('api::occupation.occupation').findMany({
+            filters: occupationFilters,
+            limit: 1
+          });
+          
+          if (occupations && occupations.length > 0) {
+            data.tuitionAmount = occupations[0].amount;
+          } else {
+            console.log(`[Lifecycle] WARNING: No occupation found for ${existing.choice1Major} at ${existing.campus?.name}`);
+          }
+
+          // 2. Fetch default Health Insurance Amount
+          const healthInsurances = await strapi.documents('api::health-insurance.health-insurance').findMany({
+            limit: 1,
+            sort: 'createdAt:desc'
+          });
+          if (healthInsurances && healthInsurances.length > 0) {
+            data.healthAmount = healthInsurances[0].amount;
+          }
+
+          // 3. Fetch default Comprehensive Insurance Amount
+          const compInsurances = await strapi.documents('api::comprehensive-insurance.comprehensive-insurance').findMany({
+            limit: 1,
+            sort: 'createdAt:desc'
+          });
+          if (compInsurances && compInsurances.length > 0) {
+            data.comprehensiveAmount = compInsurances[0].amount;
+          }
+
+          // 4. Fetch default Uniform Amount
+          const uniforms = await strapi.documents('api::uniform.uniform').findMany({
+            limit: 1,
+            sort: 'createdAt:desc'
+          });
+          if (uniforms && uniforms.length > 0) {
+            data.uniformAmount = uniforms[0].amount;
+          }
+          
+          console.log(`[Lifecycle] Populated amounts for ${existing.idNumber}: Tuition=${data.tuitionAmount}, Health=${data.healthAmount}, Comp=${data.comprehensiveAmount}, Uniform=${data.uniformAmount}`);
+        }
+      } catch (error) {
+        console.error('[Lifecycle] Error in beforeUpdate amounts population:', error);
+      }
+    }
+  },
+
   async afterUpdate(event) {
     const { result, params } = event;
     const startTime = Date.now();
