@@ -374,7 +374,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           id: o.documentId || o.id,
           code: item.code,
           name: item.name,
-          amount: item.amount,
+          amount: (item.amount !== undefined && item.amount !== null) ? item.amount : (item.attributes?.amount || 0),
           campus: campusObj?.name || campusObj,
           educationLevel: levelObj?.name || levelObj
         };
@@ -385,7 +385,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         id: h.documentId || h.id,
         code: h.code || h.attributes?.code,
         description: h.description || h.attributes?.description,
-        amount: h.amount || h.attributes?.amount
+        amount: (h.amount !== undefined && h.amount !== null) ? h.amount : (h.attributes?.amount || 0)
       })));
 
       const compData = await api.fetchComprehensiveInsurances();
@@ -393,7 +393,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         id: c.documentId || c.id,
         code: c.code || c.attributes?.code,
         description: c.description || c.attributes?.description,
-        amount: c.amount || c.attributes?.amount
+        amount: (c.amount !== undefined && c.amount !== null) ? c.amount : (c.attributes?.amount || 0)
       })));
 
       const uniformData = await api.fetchUniforms();
@@ -401,7 +401,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         id: u.documentId || u.id,
         code: u.code || u.attributes?.code,
         description: u.description || u.attributes?.description,
-        amount: u.amount || u.attributes?.amount
+        amount: (u.amount !== undefined && u.amount !== null) ? u.amount : (u.attributes?.amount || 0)
       })));
 
       const templateData = await api.fetchAdmissionTemplates();
