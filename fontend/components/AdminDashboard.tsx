@@ -211,6 +211,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>(
     user?.role === 'Kế toán' ? 'tuition' : 'submissions'
   );
+  const [tuitionPagination, setTuitionPagination] = useState({ page: 1, pageSize: 25 });
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
   const [admissionSubTab, setAdmissionSubTab] = useState<'Hải Phòng' | 'Nam Đồng' | 'Đinh Nhu' | 'Thu học phí'>('Hải Phòng');
   const [isLoading, setIsLoading] = useState(false);
@@ -1016,6 +1017,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }, [tuitionSubmissions, searchTerm, user?.role, user?.campus]);
 
+  const paginatedTuitionSubmissions = React.useMemo(() => {
+    const startIndex = (tuitionPagination.page - 1) * tuitionPagination.pageSize;
+    const endIndex = startIndex + tuitionPagination.pageSize;
+    return approvedSubmissions.slice(startIndex, endIndex);
+  }, [approvedSubmissions, tuitionPagination.page, tuitionPagination.pageSize]);
+
+  // Reset tuition pagination to page 1 when search term changes
+  useEffect(() => {
+    setTuitionPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchTerm]);
+
   const handleExportExcel = () => {
     if (submissions.length === 0) return alert('Không có dữ liệu!');
     const headers = [
@@ -1805,7 +1817,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   ) : approvedSubmissions.length === 0 ? (
                     <tr><td colSpan={12} className="px-6 py-10 text-center text-gray-400 italic font-medium bg-gray-50/20">Chưa có thí sinh trúng tuyển nào trong danh sách lọc hiện tại.</td></tr>
                   ) : (
-                    approvedSubmissions.map(s => {
+                    paginatedTuitionSubmissions.map(s => {
                       const hVal = s.isHealthSelected ? (s.healthAmount || 0) : 0;
                       const cVal = s.isComprehensiveSelected ? (s.comprehensiveAmount || 0) : 0;
                       const uVal = s.isUniformSelected ? (s.uniformAmount || 0) : 0;
@@ -1873,6 +1885,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   )}
                 </tbody>
               </table>
+              
+              {/* Tuition Pagination Controls */}
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Hiển thị {(tuitionPagination.page - 1) * tuitionPagination.pageSize + 1} - {Math.min(tuitionPagination.page * tuitionPagination.pageSize, approvedSubmissions.length)} / {approvedSubmissions.length} hồ sơ trúng tuyển
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    disabled={tuitionPagination.page <= 1}
+                    onClick={() => setTuitionPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                    className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-emerald-900 text-xs font-black">
+                    Trang {tuitionPagination.page} / {Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize) || 1}
+                  </div>
+                  <button 
+                    disabled={tuitionPagination.page >= Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize)}
+                    onClick={() => setTuitionPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                    className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         ) : activeTab === 'admission-templates' ? (
