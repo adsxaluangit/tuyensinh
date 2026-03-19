@@ -1,33 +1,22 @@
 
 export default {
-  async afterCreate(event) {
-    const { result } = event;
-    try {
-      // Auto-publish on creation to avoid "Draft" records being hidden
-      // Using entityService.update to set publishedAt if needed, or keeping documents service but with better error handling.
-      // Actually, Strapi 5 recommends documents() for publishing. Let's make it more robust.
-      await strapi.documents('api::registration.registration').publish({
-        documentId: result.documentId,
-      });
-      console.log(`Auto-published registration ${result.documentId}`);
-    } catch (error) {
-      console.error('Error auto-publishing registration:', error);
-    }
-  },
   async afterUpdate(event) {
     const { result, params } = event;
+    const startTime = Date.now();
 
     // Check if the status was updated to "Trúng tuyển" and it hasn't been sent before
-    // Note: event.params.data contains the update payload
     if (params.data && params.data.status === 'Trúng tuyển') {
       try {
-        // Fetch full registration details including relations if needed
-        const registration = await strapi.entityService.findOne('api::registration.registration', result.id, {
+        console.log(`[Lifecycle] Processing status "Trúng tuyển" for registration ${result.idNumber || result.id}...`);
+        
+        // Use document service instead of entityService for Strapi 5 compatibility
+        const registration = await strapi.documents('api::registration.registration').findOne({
+          documentId: result.documentId,
           populate: ['campus', 'educationLevel'],
         });
 
         if (!registration || !registration.email) {
-          console.log(`No email found for registration ${result.id}`);
+          console.log(`[Lifecycle] No email found or record not found for registration ${result.documentId}`);
           return;
         }
 
@@ -76,9 +65,10 @@ export default {
           html: htmlContent,
         });
 
-        console.log(`Admission email sent to ${registration.email} for ID ${registration.idNumber}`);
+        const duration = Date.now() - startTime;
+        console.log(`[Lifecycle] Admission email sent to ${registration.email} for ID ${registration.idNumber} in ${duration}ms`);
       } catch (error) {
-        console.error('Error sending admission email:', error);
+        console.error('[Lifecycle] Error sending admission email:', error);
       }
     }
   },
