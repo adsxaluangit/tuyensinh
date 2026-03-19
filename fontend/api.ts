@@ -149,7 +149,7 @@ export const fetchAllRegistrations = async (params: {
     const { page = 1, pageSize = 25, searchTerm, campus, level, major } = params;
     
     // Base URL with essential fields only (avoiding large base64 strings in list view)
-    let url = `api/registrations?populate=*&pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
+    let url = `api/registrations?pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
     
     // Fetch all scalar fields but exclude large base64 strings (frontId, backId, diploma, tempCert)
     const fieldNames = [
@@ -176,7 +176,7 @@ export const fetchAllRegistrations = async (params: {
 };
 
 export const fetchAllApprovedRegistrations = async () => {
-    let url = `api/registrations?populate=*&pagination[pageSize]=10000&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc`;
+    let url = `api/registrations?pagination[pageSize]=10000&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc`;
     
     const fieldNames = [
         'fullName', 'dob', 'pob', 'gender', 'ethnicity', 'idNumber', 'issueDate', 'issuePlace',
