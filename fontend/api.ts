@@ -163,7 +163,7 @@ export const fetchAllRegistrations = async (params: {
         'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 
         'docSeq', 'paymentMethod', 'collectorAccount', 'collectedDate', 'createdAt'
     ];
-    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('');
+    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') + '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
 
     if (searchTerm) {
         url += `&filters[$or][0][fullName][$contains]=${searchTerm}&filters[$or][1][phone][$contains]=${searchTerm}&filters[$or][2][idNumber][$contains]=${searchTerm}`;
@@ -171,6 +171,25 @@ export const fetchAllRegistrations = async (params: {
     if (campus) url += `&filters[campus][name][$eq]=${campus}`;
     if (level) url += `&filters[educationLevel][name][$eq]=${level}`;
     if (major) url += `&filters[choice1Major][$eq]=${major}`;
+
+    return await fetchAPI(url);
+};
+
+export const fetchAllApprovedRegistrations = async () => {
+    let url = `api/registrations?populate=*&pagination[pageSize]=10000&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc`;
+    
+    const fieldNames = [
+        'fullName', 'dob', 'pob', 'gender', 'ethnicity', 'idNumber', 'issueDate', 'issuePlace',
+        'phone', 'email', 'addressDetails', 'province', 'district',
+        'parentName', 'parentPhone', 
+        'choice1Major', 'choice1Specialty', 'choice2Major', 'choice2Specialty',
+        'gradSchool', 'gradYear', 'diplomaNumber',
+        'recipient', 'deliveryAddress', 'deliveryAddressDetails',
+        'status', 'tuitionStatus', 'tuitionAmount', 'healthAmount', 'comprehensiveAmount', 'uniformAmount', 
+        'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 
+        'docSeq', 'paymentMethod', 'collectorAccount', 'collectedDate', 'createdAt'
+    ];
+    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') + '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
 
     return await fetchAPI(url);
 };

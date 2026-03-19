@@ -208,12 +208,16 @@ const TuitionPaidInput: React.FC<{
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
-  const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>('submissions');
+  const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>(
+    user?.role === 'Kế toán' ? 'tuition' : 'submissions'
+  );
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
   const [admissionSubTab, setAdmissionSubTab] = useState<'Hải Phòng' | 'Nam Đồng' | 'Đinh Nhu' | 'Thu học phí'>('Hải Phòng');
   const [isLoading, setIsLoading] = useState(false);
+  const [isTuitionLoading, setIsTuitionLoading] = useState(false);
 
   const [submissions, setSubmissions] = useState<FormData[]>([]);
+  const [tuitionSubmissions, setTuitionSubmissions] = useState<FormData[]>([]);
   const [users, setUsers] = useState<User[]>([]);
 
   const [tuitionConfigs, setTuitionConfigs] = useState<OccupationTuition[]>([]);
@@ -450,6 +454,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   useEffect(() => {
     fetchData();
   }, [pagination.page, pagination.pageSize, searchTerm, filterCampus, filterLevel, filterMajor]);
+
+  const fetchTuitionData = async () => {
+    setIsTuitionLoading(true);
+    try {
+      const response = await api.fetchAllApprovedRegistrations();
+      const regData = response.data || response;
+      setTuitionSubmissions(regData.map((r: any) => ({
+        ...r,
+        id: r.idNumber,
+        docId: r.documentId || r.id,
+        campus: r.campus?.name || r.campus,
+        educationLevel: r.educationLevel?.name || r.educationLevel
+      })));
+    } catch (error) {
+      console.error("Lỗi khi tải danh sách học phí:", error);
+    } finally {
+      setIsTuitionLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'tuition') {
+      fetchTuitionData();
+    }
+  }, [activeTab]);
 
   const handleViewDetail = async (submission: any) => {
     try {
@@ -974,8 +1003,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   }, [submissions, searchTerm, filterCampus, filterLevel, filterMajor, user?.role, user?.campus]);
 
   const approvedSubmissions = React.useMemo(() => {
-    return filteredSubmissions.filter(s => s.status === SubmissionStatus.APPROVED);
-  }, [filteredSubmissions]);
+    const searchLower = searchTerm.toLowerCase();
+    return tuitionSubmissions
+      .filter(s => {
+        if (user?.role !== 'Quản trị viên') {
+          if (!user?.campus || s.campus !== user.campus) return false;
+        }
+        return s.fullName.toLowerCase().includes(searchLower) ||
+          s.phone.includes(searchTerm) ||
+          s.idNumber.includes(searchTerm);
+      })
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  }, [tuitionSubmissions, searchTerm, user?.role, user?.campus]);
 
   const handleExportExcel = () => {
     if (submissions.length === 0) return alert('Không có dữ liệu!');
@@ -1761,7 +1800,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   <tr><th className="px-4 py-4">Mã số (CCCD)</th><th className="px-4 py-4">Họ và tên</th><th className="px-4 py-4">SĐT</th><th className="px-4 py-4">Nghề đào tạo</th><th className="px-4 py-4 text-center">Học phí</th><th className="px-4 py-4 text-center">BH Y Tế</th><th className="px-4 py-4 text-center">BH Toàn Diện</th><th className="px-4 py-4 text-center">Đồng Phục</th><th className="px-4 py-4 text-center">Đã nộp</th><th className="px-4 py-4 text-center">Còn lại</th><th className="px-4 py-4 text-center">In Hóa đơn</th><th className="px-4 py-4 text-center">Ghi chú</th></tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
-                  {approvedSubmissions.length === 0 ? (
+                  {isTuitionLoading ? (
+                    <tr><td colSpan={12} className="px-6 py-10 text-center text-blue-600 font-bold italic animate-pulse">Đang nạp toàn bộ danh sách trúng tuyển...</td></tr>
+                  ) : approvedSubmissions.length === 0 ? (
                     <tr><td colSpan={12} className="px-6 py-10 text-center text-gray-400 italic font-medium bg-gray-50/20">Chưa có thí sinh trúng tuyển nào trong danh sách lọc hiện tại.</td></tr>
                   ) : (
                     approvedSubmissions.map(s => {
@@ -1774,12 +1815,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                       const handleFeeSelect = async (field: 'isHealthSelected' | 'isComprehensiveSelected' | 'isUniformSelected', checked: boolean) => {
                         try {
                           // Update local state first for instant feedback
-                          setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, [field]: checked } : item));
+                          setTuitionSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, [field]: checked } : item));
                           await api.updateRegistration(s.docId, { [field]: checked });
                         } catch (error) {
                           alert("Lỗi khi cập nhật cấu hình phí");
                           // Revert on error
-                          setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, [field]: !checked } : item));
+                          setTuitionSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, [field]: !checked } : item));
                         }
                       };
 
@@ -1802,7 +1843,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                                 try {
                                   const now = new Date().toISOString();
                                   const collector = user.fullName || user.username;
-                                  setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now } : item));
+                                  setTuitionSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now } : item));
                                   await api.updateRegistration(s.docId, { tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now });
                                 } catch (err) {
                                   console.error(err);
