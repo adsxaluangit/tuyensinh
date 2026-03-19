@@ -208,7 +208,9 @@ const TuitionPaidInput: React.FC<{
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
-  const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>('submissions');
+  const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>(
+    user?.role === 'Kế toán' ? 'tuition' : 'submissions'
+  );
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
   const [admissionSubTab, setAdmissionSubTab] = useState<'Hải Phòng' | 'Nam Đồng' | 'Đinh Nhu' | 'Thu học phí'>('Hải Phòng');
   const [isLoading, setIsLoading] = useState(false);

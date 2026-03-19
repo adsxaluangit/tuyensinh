@@ -163,7 +163,7 @@ export const fetchAllRegistrations = async (params: {
         'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 
         'docSeq', 'paymentMethod', 'collectorAccount', 'collectedDate', 'createdAt'
     ];
-    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('');
+    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') + '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
 
     if (searchTerm) {
         url += `&filters[$or][0][fullName][$contains]=${searchTerm}&filters[$or][1][phone][$contains]=${searchTerm}&filters[$or][2][idNumber][$contains]=${searchTerm}`;
@@ -189,7 +189,7 @@ export const fetchAllApprovedRegistrations = async () => {
         'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 
         'docSeq', 'paymentMethod', 'collectorAccount', 'collectedDate', 'createdAt'
     ];
-    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('');
+    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') + '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
 
     return await fetchAPI(url);
 };
