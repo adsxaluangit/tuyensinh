@@ -348,16 +348,16 @@ const App: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <InputGroup label="Tỉnh/Thành phố thường trú (Sau sát nhập)" required>
+              <InputGroup label="Tỉnh/Thành phố thường trú (Sau sáp nhập)" required>
                 <select className={selectClasses} required value={formData.province} onChange={(e) => setFormData({ ...formData, province: e.target.value, district: '' })}>
                   <option value="">Chọn tỉnh/thành phố</option>
                   {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </InputGroup>
-              <InputGroup label="Xã/Phường/Thị trấn (Sau sát nhập)" required>
+              <InputGroup label="Xã/Phường/Thị trấn (Sau sáp nhập)" required>
                 <input type="text" required placeholder="Ghi rõ tên xã/phường/thị trấn" className={inputClasses} value={formData.district} onChange={(e) => setFormData({ ...formData, district: e.target.value })} />
               </InputGroup>
-              <InputGroup label="Thôn/Xóm/Số nhà (Sau sát nhập)" required>
+              <InputGroup label="Thôn/Xóm/Số nhà (Sau sáp nhập)" required>
                 <input type="text" required placeholder="Số nhà, đường, ngõ, xóm" className={inputClasses} value={formData.addressDetails} onChange={(e) => setFormData({ ...formData, addressDetails: e.target.value })} />
               </InputGroup>
             </div>
