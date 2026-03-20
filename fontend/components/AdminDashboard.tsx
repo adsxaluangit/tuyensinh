@@ -136,7 +136,7 @@ const FilePreviewItem = ({ label, src }: { label: string, src: string | null }) 
     <>
       <div className="flex flex-col items-start gap-4 w-full">
         <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{label}</p>
-        <div 
+        <div
           className="w-full aspect-[4/3] bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100 overflow-hidden flex items-center justify-center group relative cursor-pointer hover:border-blue-400 hover:shadow-xl transition-all"
           onClick={() => src && setIsOpen(true)}
         >
@@ -157,12 +157,12 @@ const FilePreviewItem = ({ label, src }: { label: string, src: string | null }) 
       </div>
 
       {isOpen && src && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm cursor-zoom-out"
           onClick={() => setIsOpen(false)}
         >
           <img src={src} alt={label} className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
-          <button 
+          <button
             className="absolute top-6 right-6 text-white/50 hover:text-white bg-white/10 hover:bg-white/20 p-2 rounded-full transition-all"
             onClick={(e) => { e.stopPropagation(); setIsOpen(false); }}
             title="Đóng (Esc)"
@@ -309,7 +309,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [filterMajor, setFilterMajor] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<FormData | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  
+
   // Pagination State
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25 });
   const [totalCount, setTotalCount] = useState(0);
@@ -358,10 +358,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         level: filterLevel,
         major: filterMajor
       });
-      
+
       const regData = response.data;
       const meta = response.meta;
-      
+
       setSubmissions(regData.map((r: any) => ({
         ...r,
         id: r.idNumber, // Dùng cho UI
@@ -369,7 +369,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         campus: r.campus?.name || r.campus,
         educationLevel: r.educationLevel?.name || r.educationLevel
       })));
-      
+
       if (meta?.pagination) {
         setTotalCount(meta.pagination.total);
       }
@@ -1031,7 +1031,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const handleExportExcel = async () => {
     if (totalCount === 0) return alert('Không có dữ liệu!');
     setIsLoading(true);
-    
+
     try {
       const response = await api.fetchAllRegistrations({
         page: 1,
@@ -1041,7 +1041,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         level: filterLevel,
         major: filterMajor
       });
-      
+
       const allData = response.data.map((r: any) => ({
         ...r,
         id: r.idNumber,
@@ -1104,7 +1104,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const ws = XLSX.utils.aoa_to_sheet([
         [`TỔNG SỐ HỒ SƠ TỔNG HỢP TRÊN HỆ THỐNG: ${allData.length}`],
         [],
-        headers, 
+        headers,
         ...rows
       ]);
       const wb = XLSX.utils.book_new();
@@ -1163,7 +1163,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const ws = XLSX.utils.aoa_to_sheet([
       [`TỔNG SỐ HỒ SƠ HỌC PHÍ (ĐÃ XUẤT RA EXCEL): ${approvedSubmissions.length}`],
       [],
-      headers, 
+      headers,
       ...rows
     ]);
     const wb = XLSX.utils.book_new();
@@ -1190,9 +1190,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       for (const id of idsToUpdate) {
         const sub = submissions.find(s => s.id === id);
         if (sub?.docId) {
-          await api.updateRegistration(sub.docId, { 
+          await api.updateRegistration(sub.docId, {
             status,
-            syncAmounts: status === SubmissionStatus.APPROVED 
+            syncAmounts: status === SubmissionStatus.APPROVED
           });
         }
       }
@@ -1229,9 +1229,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const updateCurrentSubmissionStatus = async (status: SubmissionStatus) => {
     if (!selectedSubmission?.docId) return;
     try {
-      await api.updateRegistration(selectedSubmission.docId, { 
+      await api.updateRegistration(selectedSubmission.docId, {
         status,
-        syncAmounts: status === SubmissionStatus.APPROVED 
+        syncAmounts: status === SubmissionStatus.APPROVED
       });
       // Re-fetch data to reflect newly synced amounts
       await fetchData();
@@ -1240,7 +1240,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       if (refreshed?.data) {
         setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId }));
       }
-      
+
       if (status === SubmissionStatus.RECEIVED) {
         alert("Đã tiếp nhận hồ sơ");
       }
@@ -1264,14 +1264,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           status: SubmissionStatus.APPROVED,
           syncAmounts: true
         });
-        
+
         // Re-fetch data
         await fetchData();
-        
+
         // Update local object
         const refreshed = await api.getRegistrationById(selectedSubmission.docId);
         if (refreshed?.data) {
-           setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId, docSeq: currentSeq, status: SubmissionStatus.APPROVED }));
+          setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId, docSeq: currentSeq, status: SubmissionStatus.APPROVED }));
         }
       } catch (error) {
         alert("Lỗi khi cập nhật hồ sơ trúng tuyển");
@@ -1407,7 +1407,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const handleSyncTuitionFromConfig = async () => {
     if (approvedSubmissions.length === 0) return alert('Không có dữ liệu trúng tuyển!');
     if (!window.confirm(`Bạn có chắc muốn đồng bộ lại học phí và bảo hiểm cho ${approvedSubmissions.length} thí sinh từ cấu hình hệ thống?`)) return;
-    
+
     setIsLoading(true);
     let successCount = 0;
     try {
@@ -1735,7 +1735,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20"><svg className="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
             <div>
               <h1 className="text-white text-lg font-black tracking-tighter leading-none">ADMIN PORTAL</h1>
-              <p className="text-blue-300/60 text-[9px] font-bold uppercase tracking-widest mt-1">Cao đẳng Hàng hải I</p>
+              <p className="text-blue-300/60 text-[9px] font-bold uppercase tracking-widest mt-1">Cao đẳng Hàng hải và Đường thuỷ I</p>
             </div>
           </div>
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -1800,14 +1800,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   </tbody>
                 </table>
               </div>
-              
+
               {/* Pagination Controls */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                   Hiển thị {submissions.length} / {totalCount} hồ sơ
                 </div>
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     disabled={pagination.page <= 1}
                     onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                     className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -1817,7 +1817,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-blue-900 text-xs font-black">
                     Trang {pagination.page} / {Math.ceil(totalCount / pagination.pageSize) || 1}
                   </div>
-                  <button 
+                  <button
                     disabled={pagination.page >= Math.ceil(totalCount / pagination.pageSize)}
                     onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                     className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -1838,8 +1838,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
               <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[120px]"><span className="text-[10px] text-emerald-600 font-extrabold uppercase block mb-0.5">Trúng tuyển</span><span className="text-xl font-black text-emerald-900">{approvedSubmissions.length}</span></div>
-              <button 
-                onClick={handleSyncTuitionFromConfig} 
+              <button
+                onClick={handleSyncTuitionFromConfig}
                 className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
                 disabled={isLoading}
               >
@@ -1930,14 +1930,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   )}
                 </tbody>
               </table>
-              
+
               {/* Tuition Pagination Controls */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
                   Hiển thị {(tuitionPagination.page - 1) * tuitionPagination.pageSize + 1} - {Math.min(tuitionPagination.page * tuitionPagination.pageSize, approvedSubmissions.length)} / {approvedSubmissions.length} hồ sơ trúng tuyển
                 </div>
                 <div className="flex items-center gap-2">
-                  <button 
+                  <button
                     disabled={tuitionPagination.page <= 1}
                     onClick={() => setTuitionPagination(prev => ({ ...prev, page: prev.page - 1 }))}
                     className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
@@ -1947,7 +1947,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-emerald-900 text-xs font-black">
                     Trang {tuitionPagination.page} / {Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize) || 1}
                   </div>
-                  <button 
+                  <button
                     disabled={tuitionPagination.page >= Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize)}
                     onClick={() => setTuitionPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                     className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
