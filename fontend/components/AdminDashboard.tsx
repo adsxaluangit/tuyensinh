@@ -1916,11 +1916,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                             try {
                               const now = new Date().toISOString();
                               const collector = user.fullName || user.username;
-                              setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod, collectorAccount: collector, collectedDate: now } : item));
+                              setTuitionSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod, collectorAccount: collector, collectedDate: now } : item));
                               await api.updateRegistration(s.docId, { paymentMethod: newMethod, collectorAccount: collector, collectedDate: now });
                             } catch (err) {
                               alert("Lỗi khi lưu phương thức thanh toán");
-                              fetchData();
+                              fetchTuitionData();
                             }
                           }}><option value="">-- Chọn --</option><option value="Tiền mặt">Tiền mặt</option><option value="Chuyển khoản">Chuyển khoản</option></select></td>
                         </tr>
