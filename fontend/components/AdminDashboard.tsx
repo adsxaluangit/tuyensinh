@@ -200,7 +200,7 @@ const TuitionPaidInput: React.FC<{
   return (
     <input
       type="text"
-      className="w-32 bg-white border border-gray-200 rounded-lg px-2 py-1 text-right font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500/20"
+      className="w-24 bg-white border border-gray-200 rounded-lg px-2 py-1 text-right font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500/20"
       value={localValue}
       onChange={handleChange}
     />
@@ -211,6 +211,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>(
     user?.role === 'Kế toán' ? 'tuition' : 'submissions'
   );
+  const [tuitionPagination, setTuitionPagination] = useState({ page: 1, pageSize: 25 });
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
   const [admissionSubTab, setAdmissionSubTab] = useState<'Hải Phòng' | 'Nam Đồng' | 'Đinh Nhu' | 'Thu học phí'>('Hải Phòng');
   const [isLoading, setIsLoading] = useState(false);
@@ -1016,64 +1017,110 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }, [tuitionSubmissions, searchTerm, user?.role, user?.campus]);
 
-  const handleExportExcel = () => {
-    if (submissions.length === 0) return alert('Không có dữ liệu!');
-    const headers = [
-      'STT', 'Ngày đăng ký', 'Trạng thái',
-      'Họ và tên', 'Giới tính', 'Ngày sinh', 'Nơi sinh', 'Dân tộc',
-      'Số CCCD', 'Ngày cấp', 'Nơi cấp',
-      'Số điện thoại', 'Email',
-      'Địa chỉ chi tiết', 'Xã/Phường/Thị trấn', 'Tỉnh/Thành phố',
-      'Họ tên phụ huynh', 'SĐT phụ huynh',
-      'Cơ sở đăng ký', 'Hệ đào tạo',
-      'Nguyện vọng 1', 'Mã nghề NV1',
-      'Nguyện vọng 2', 'Mã nghề NV2',
-      'Trường THPT/TC/CĐ', 'Năm tốt nghiệp', 'Xếp loại tốt nghiệp',
-      'Người nhận giấy báo', 'Địa chỉ nhận giấy báo', 'Chi tiết nới nhận'
-    ];
+  const paginatedTuitionSubmissions = React.useMemo(() => {
+    const startIndex = (tuitionPagination.page - 1) * tuitionPagination.pageSize;
+    const endIndex = startIndex + tuitionPagination.pageSize;
+    return approvedSubmissions.slice(startIndex, endIndex);
+  }, [approvedSubmissions, tuitionPagination.page, tuitionPagination.pageSize]);
 
-    const rows = filteredSubmissions.map((s, idx) => [
-      idx + 1,
-      s.submissionDate ? new Date(s.submissionDate).toLocaleDateString('vi-VN') : '',
-      s.status,
-      s.fullName,
-      s.gender,
-      s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
-      s.pob,
-      s.ethnicity,
-      `'${s.idNumber}`,
-      s.issueDate ? new Date(s.issueDate).toLocaleDateString('vi-VN') : '',
-      s.issuePlace,
-      `'${s.phone}`,
-      s.email,
-      s.addressDetails,
-      s.district,
-      s.province,
-      s.parentName,
-      `'${s.parentPhone}`,
-      s.campus,
-      s.educationLevel,
-      s.choice1Major,
-      s.choice1Specialty,
-      s.choice2Major || '',
-      s.choice2Specialty || '',
-      s.gradSchool,
-      s.gradYear,
-      s.diplomaNumber, // Using this field for classification/rank if applicable, or check mapping
-      s.recipient,
-      s.deliveryAddress,
-      s.deliveryAddressDetails
-    ]);
+  // Reset tuition pagination to page 1 when search term changes
+  useEffect(() => {
+    setTuitionPagination(prev => ({ ...prev, page: 1 }));
+  }, [searchTerm]);
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "DanhSachTuyenSinh");
-    XLSX.writeFile(wb, `Danh_sach_tuyen_sinh_${Date.now()}.xlsx`);
+  const handleExportExcel = async () => {
+    if (totalCount === 0) return alert('Không có dữ liệu!');
+    setIsLoading(true);
+    
+    try {
+      const response = await api.fetchAllRegistrations({
+        page: 1,
+        pageSize: 10000,
+        searchTerm,
+        campus: filterCampus,
+        level: filterLevel,
+        major: filterMajor
+      });
+      
+      const allData = response.data.map((r: any) => ({
+        ...r,
+        id: r.idNumber,
+        campus: r.campus?.name || r.campus,
+        educationLevel: r.educationLevel?.name || r.educationLevel
+      })).filter((s: any) => {
+        if (user?.role !== 'Quản trị viên') {
+          if (!user?.campus || s.campus !== user.campus) return false;
+        }
+        return true;
+      });
+
+      const headers = [
+        'STT', 'Ngày đăng ký', 'Trạng thái',
+        'Họ và tên', 'Giới tính', 'Ngày sinh', 'Nơi sinh', 'Dân tộc',
+        'Số CCCD', 'Ngày cấp', 'Nơi cấp',
+        'Số điện thoại', 'Email',
+        'Địa chỉ chi tiết', 'Xã/Phường/Thị trấn', 'Tỉnh/Thành phố',
+        'Họ tên phụ huynh', 'SĐT phụ huynh',
+        'Cơ sở đăng ký', 'Hệ đào tạo',
+        'Nguyện vọng 1', 'Mã nghề NV1',
+        'Nguyện vọng 2', 'Mã nghề NV2',
+        'Trường THPT/TC/CĐ', 'Năm tốt nghiệp', 'Xếp loại tốt nghiệp',
+        'Người nhận giấy báo', 'Địa chỉ nhận giấy báo', 'Chi tiết nới nhận'
+      ];
+
+      const rows = allData.map((s: any, idx: number) => [
+        idx + 1,
+        s.submissionDate ? new Date(s.submissionDate).toLocaleDateString('vi-VN') : '',
+        s.status,
+        s.fullName,
+        s.gender,
+        s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
+        s.pob,
+        s.ethnicity,
+        `'${s.idNumber}`,
+        s.issueDate ? new Date(s.issueDate).toLocaleDateString('vi-VN') : '',
+        s.issuePlace,
+        `'${s.phone}`,
+        s.email,
+        s.addressDetails,
+        s.district,
+        s.province,
+        s.parentName,
+        `'${s.parentPhone}`,
+        s.campus,
+        s.educationLevel,
+        s.choice1Major,
+        s.choice1Specialty,
+        s.choice2Major || '',
+        s.choice2Specialty || '',
+        s.gradSchool,
+        s.gradYear,
+        s.diplomaNumber,
+        s.recipient,
+        s.deliveryAddress,
+        s.deliveryAddressDetails
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet([
+        [`TỔNG SỐ HỒ SƠ TỔNG HỢP TRÊN HỆ THỐNG: ${allData.length}`],
+        [],
+        headers, 
+        ...rows
+      ]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "DanhSachTuyenSinh");
+      XLSX.writeFile(wb, `Danh_sach_tuyen_sinh_toan_he_thong_${Date.now()}.xlsx`);
+    } catch (error) {
+      console.error("Lỗi xuất excel:", error);
+      alert("Đã xảy ra lỗi khi tải dữ liệu xuất Excel.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleExportTuitionExcel = () => {
     if (submissions.length === 0) return alert('Không có dữ liệu!');
-    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Ngành học', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc người thu tiền', 'Ngày nộp', 'Ngày thu chi tiết'];
+    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Nghề đào tạo', 'Mã nghề', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc người thu tiền', 'Ngày nộp', 'Ngày thu chi tiết'];
     const rows = approvedSubmissions.map((s, idx) => {
       const hAmount = s.isHealthSelected ? (s.healthAmount || 0) : 0;
       const cAmount = s.isComprehensiveSelected ? (s.comprehensiveAmount || 0) : 0;
@@ -1094,7 +1141,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         s.addressDetails,
         s.district,
         s.province,
-        s.choice1Specialty,
+        s.choice1Major || '',
+        s.choice1Specialty || '',
         (s.tuitionAmount || 0),
         hAmount,
         cAmount,
@@ -1112,7 +1160,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       ];
     });
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const ws = XLSX.utils.aoa_to_sheet([
+      [`TỔNG SỐ HỒ SƠ HỌC PHÍ (ĐÃ XUẤT RA EXCEL): ${approvedSubmissions.length}`],
+      [],
+      headers, 
+      ...rows
+    ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "QuanLyHocPhi");
     XLSX.writeFile(wb, `Danh_sach_hoc_phi_${Date.now()}.xlsx`);
@@ -1186,6 +1239,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const refreshed = await api.getRegistrationById(selectedSubmission.docId);
       if (refreshed?.data) {
         setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId }));
+      }
+      
+      if (status === SubmissionStatus.RECEIVED) {
+        alert("Đã tiếp nhận hồ sơ");
       }
     } catch (error) {
       alert("Lỗi khi cập nhật trạng thái");
@@ -1797,7 +1854,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
               <table className="w-full text-left">
                 <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
-                  <tr><th className="px-4 py-4">Mã số (CCCD)</th><th className="px-4 py-4">Họ và tên</th><th className="px-4 py-4">SĐT</th><th className="px-4 py-4">Nghề đào tạo</th><th className="px-4 py-4 text-center">Học phí</th><th className="px-4 py-4 text-center">BH Y Tế</th><th className="px-4 py-4 text-center">BH Toàn Diện</th><th className="px-4 py-4 text-center">Đồng Phục</th><th className="px-4 py-4 text-center">Đã nộp</th><th className="px-4 py-4 text-center">Còn lại</th><th className="px-4 py-4 text-center">In Hóa đơn</th><th className="px-4 py-4 text-center">Ghi chú</th></tr>
+                  <tr><th className="px-2 py-4 w-[110px]">Mã số (CCCD)</th><th className="px-4 py-4">Họ và tên</th><th className="px-4 py-4">SĐT</th><th className="px-4 py-4 min-w-[140px]">Nghề đào tạo</th><th className="px-4 py-4 text-center">Học phí</th><th className="px-4 py-4 text-center">BH Y Tế</th><th className="px-4 py-4 text-center">BH Toàn Diện</th><th className="px-4 py-4 text-center">Đồng Phục</th><th className="px-2 py-4 text-center w-[110px]">Đã nộp</th><th className="px-4 py-4 text-center">Còn lại</th><th className="px-4 py-4 text-center">In Hóa đơn</th><th className="px-4 py-4 text-center">Ghi chú</th></tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {isTuitionLoading ? (
@@ -1805,7 +1862,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   ) : approvedSubmissions.length === 0 ? (
                     <tr><td colSpan={12} className="px-6 py-10 text-center text-gray-400 italic font-medium bg-gray-50/20">Chưa có thí sinh trúng tuyển nào trong danh sách lọc hiện tại.</td></tr>
                   ) : (
-                    approvedSubmissions.map(s => {
+                    paginatedTuitionSubmissions.map(s => {
                       const hVal = s.isHealthSelected ? (s.healthAmount || 0) : 0;
                       const cVal = s.isComprehensiveSelected ? (s.comprehensiveAmount || 0) : 0;
                       const uVal = s.isUniformSelected ? (s.uniformAmount || 0) : 0;
@@ -1826,15 +1883,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
                       return (
                         <tr key={s.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 text-xs font-mono text-gray-400">{s.idNumber}</td>
+                          <td className="px-2 py-4 text-xs font-mono text-gray-400 break-all w-[110px] whitespace-nowrap">{s.idNumber}</td>
                           <td className="px-4 py-4 font-bold text-blue-900">{s.fullName}</td>
                           <td className="px-4 py-4 text-gray-600">{s.phone}</td>
-                          <td className="px-4 py-4 font-medium text-gray-700 uppercase text-[11px]">{s.choice1Major}</td>
+                          <td className="px-4 py-4 font-medium text-gray-700 uppercase text-[11px] min-w-[140px]">{s.choice1Major}</td>
                           <td className="px-4 py-4 text-center font-bold text-gray-900">{(s.tuitionAmount || 0).toLocaleString('vi-VN')}</td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-blue-600 cursor-pointer" checked={s.isHealthSelected} onChange={(e) => handleFeeSelect('isHealthSelected', e.target.checked)} /><span className={`font-bold text-blue-600 ${!s.isHealthSelected && 'opacity-30'}`}>{(s.healthAmount || 0).toLocaleString('vi-VN')}</span></div></td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-orange-600 cursor-pointer" checked={s.isComprehensiveSelected} onChange={(e) => handleFeeSelect('isComprehensiveSelected', e.target.checked)} /><span className={`font-bold text-orange-600 ${!s.isComprehensiveSelected && 'opacity-30'}`}>{(s.comprehensiveAmount || 0).toLocaleString('vi-VN')}</span></div></td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-slate-600 cursor-pointer" checked={s.isUniformSelected} onChange={(e) => handleFeeSelect('isUniformSelected', e.target.checked)} /><span className={`font-bold text-slate-600 ${!s.isUniformSelected && 'opacity-30'}`}>{(s.uniformAmount || 0).toLocaleString('vi-VN')}</span></div></td>
-                          <td className="px-4 py-4 text-center">
+                          <td className="px-2 py-4 text-center w-[110px]">
                             <TuitionPaidInput
                               key={`${s.id}-${s.tuitionPaidAmount}`}
                               initialValue={s.tuitionPaidAmount || 0}
@@ -1860,11 +1917,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                             try {
                               const now = new Date().toISOString();
                               const collector = user.fullName || user.username;
-                              setSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod, collectorAccount: collector, collectedDate: now } : item));
+                              setTuitionSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod, collectorAccount: collector, collectedDate: now } : item));
                               await api.updateRegistration(s.docId, { paymentMethod: newMethod, collectorAccount: collector, collectedDate: now });
                             } catch (err) {
                               alert("Lỗi khi lưu phương thức thanh toán");
-                              fetchData();
+                              fetchTuitionData();
                             }
                           }}><option value="">-- Chọn --</option><option value="Tiền mặt">Tiền mặt</option><option value="Chuyển khoản">Chuyển khoản</option></select></td>
                         </tr>
@@ -1873,6 +1930,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   )}
                 </tbody>
               </table>
+              
+              {/* Tuition Pagination Controls */}
+              <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                  Hiển thị {(tuitionPagination.page - 1) * tuitionPagination.pageSize + 1} - {Math.min(tuitionPagination.page * tuitionPagination.pageSize, approvedSubmissions.length)} / {approvedSubmissions.length} hồ sơ trúng tuyển
+                </div>
+                <div className="flex items-center gap-2">
+                  <button 
+                    disabled={tuitionPagination.page <= 1}
+                    onClick={() => setTuitionPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                    className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                  </button>
+                  <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-emerald-900 text-xs font-black">
+                    Trang {tuitionPagination.page} / {Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize) || 1}
+                  </div>
+                  <button 
+                    disabled={tuitionPagination.page >= Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize)}
+                    onClick={() => setTuitionPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                    className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                  </button>
+                </div>
+              </div>
+
             </div>
           </div>
         ) : activeTab === 'admission-templates' ? (

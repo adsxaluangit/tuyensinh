@@ -23,13 +23,35 @@ interface OccupationConfig {
 }
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'form' | 'login' | 'admin' | 'student-login'>('form');
+  const [view, setView] = useState<'form' | 'login' | 'admin' | 'student-login'>(() => {
+    return (localStorage.getItem('tuyensinh_view') as 'form' | 'login' | 'admin' | 'student-login') || 'form';
+  });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [studentIdInput, setStudentIdInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('tuyensinh_user');
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Persistent Session
+  useEffect(() => {
+    localStorage.setItem('tuyensinh_view', view);
+  }, [view]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('tuyensinh_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('tuyensinh_user');
+    }
+  }, [currentUser]);
 
   // Master Data from Settings
   const [masterOccupations, setMasterOccupations] = useState<OccupationConfig[]>([]);
@@ -334,7 +356,22 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <InputGroup label="Số CCCD/CMND" required>
-                <input type="text" required placeholder="Số định danh 12 số" className={inputClasses} disabled={isEditing} value={formData.idNumber} onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })} />
+                <input 
+                  type="text" 
+                  pattern="\d{12}" 
+                  minLength={12} 
+                  maxLength={12} 
+                  title="Vui lòng nhập chính xác 12 chữ số" 
+                  required 
+                  placeholder="Số định danh 12 số" 
+                  className={inputClasses} 
+                  disabled={isEditing} 
+                  value={formData.idNumber} 
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                    setFormData({ ...formData, idNumber: val });
+                  }} 
+                />
               </InputGroup>
               <InputGroup label="Dân tộc" required>
                 <input type="text" required placeholder="Dân tộc" className={inputClasses} value={formData.ethnicity} onChange={(e) => setFormData({ ...formData, ethnicity: e.target.value })} />
