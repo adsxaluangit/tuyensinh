@@ -1028,59 +1028,94 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     setTuitionPagination(prev => ({ ...prev, page: 1 }));
   }, [searchTerm]);
 
-  const handleExportExcel = () => {
-    if (submissions.length === 0) return alert('Không có dữ liệu!');
-    const headers = [
-      'STT', 'Ngày đăng ký', 'Trạng thái',
-      'Họ và tên', 'Giới tính', 'Ngày sinh', 'Nơi sinh', 'Dân tộc',
-      'Số CCCD', 'Ngày cấp', 'Nơi cấp',
-      'Số điện thoại', 'Email',
-      'Địa chỉ chi tiết', 'Xã/Phường/Thị trấn', 'Tỉnh/Thành phố',
-      'Họ tên phụ huynh', 'SĐT phụ huynh',
-      'Cơ sở đăng ký', 'Hệ đào tạo',
-      'Nguyện vọng 1', 'Mã nghề NV1',
-      'Nguyện vọng 2', 'Mã nghề NV2',
-      'Trường THPT/TC/CĐ', 'Năm tốt nghiệp', 'Xếp loại tốt nghiệp',
-      'Người nhận giấy báo', 'Địa chỉ nhận giấy báo', 'Chi tiết nới nhận'
-    ];
+  const handleExportExcel = async () => {
+    if (totalCount === 0) return alert('Không có dữ liệu!');
+    setIsLoading(true);
+    
+    try {
+      const response = await api.fetchAllRegistrations({
+        page: 1,
+        pageSize: 10000,
+        searchTerm,
+        campus: filterCampus,
+        level: filterLevel,
+        major: filterMajor
+      });
+      
+      const allData = response.data.map((r: any) => ({
+        ...r,
+        id: r.idNumber,
+        campus: r.campus?.name || r.campus,
+        educationLevel: r.educationLevel?.name || r.educationLevel
+      })).filter((s: any) => {
+        if (user?.role !== 'Quản trị viên') {
+          if (!user?.campus || s.campus !== user.campus) return false;
+        }
+        return true;
+      });
 
-    const rows = filteredSubmissions.map((s, idx) => [
-      idx + 1,
-      s.submissionDate ? new Date(s.submissionDate).toLocaleDateString('vi-VN') : '',
-      s.status,
-      s.fullName,
-      s.gender,
-      s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
-      s.pob,
-      s.ethnicity,
-      `'${s.idNumber}`,
-      s.issueDate ? new Date(s.issueDate).toLocaleDateString('vi-VN') : '',
-      s.issuePlace,
-      `'${s.phone}`,
-      s.email,
-      s.addressDetails,
-      s.district,
-      s.province,
-      s.parentName,
-      `'${s.parentPhone}`,
-      s.campus,
-      s.educationLevel,
-      s.choice1Major,
-      s.choice1Specialty,
-      s.choice2Major || '',
-      s.choice2Specialty || '',
-      s.gradSchool,
-      s.gradYear,
-      s.diplomaNumber, // Using this field for classification/rank if applicable, or check mapping
-      s.recipient,
-      s.deliveryAddress,
-      s.deliveryAddressDetails
-    ]);
+      const headers = [
+        'STT', 'Ngày đăng ký', 'Trạng thái',
+        'Họ và tên', 'Giới tính', 'Ngày sinh', 'Nơi sinh', 'Dân tộc',
+        'Số CCCD', 'Ngày cấp', 'Nơi cấp',
+        'Số điện thoại', 'Email',
+        'Địa chỉ chi tiết', 'Xã/Phường/Thị trấn', 'Tỉnh/Thành phố',
+        'Họ tên phụ huynh', 'SĐT phụ huynh',
+        'Cơ sở đăng ký', 'Hệ đào tạo',
+        'Nguyện vọng 1', 'Mã nghề NV1',
+        'Nguyện vọng 2', 'Mã nghề NV2',
+        'Trường THPT/TC/CĐ', 'Năm tốt nghiệp', 'Xếp loại tốt nghiệp',
+        'Người nhận giấy báo', 'Địa chỉ nhận giấy báo', 'Chi tiết nới nhận'
+      ];
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "DanhSachTuyenSinh");
-    XLSX.writeFile(wb, `Danh_sach_tuyen_sinh_${Date.now()}.xlsx`);
+      const rows = allData.map((s: any, idx: number) => [
+        idx + 1,
+        s.submissionDate ? new Date(s.submissionDate).toLocaleDateString('vi-VN') : '',
+        s.status,
+        s.fullName,
+        s.gender,
+        s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
+        s.pob,
+        s.ethnicity,
+        `'${s.idNumber}`,
+        s.issueDate ? new Date(s.issueDate).toLocaleDateString('vi-VN') : '',
+        s.issuePlace,
+        `'${s.phone}`,
+        s.email,
+        s.addressDetails,
+        s.district,
+        s.province,
+        s.parentName,
+        `'${s.parentPhone}`,
+        s.campus,
+        s.educationLevel,
+        s.choice1Major,
+        s.choice1Specialty,
+        s.choice2Major || '',
+        s.choice2Specialty || '',
+        s.gradSchool,
+        s.gradYear,
+        s.diplomaNumber,
+        s.recipient,
+        s.deliveryAddress,
+        s.deliveryAddressDetails
+      ]);
+
+      const ws = XLSX.utils.aoa_to_sheet([
+        [`TỔNG SỐ HỒ SƠ TỔNG HỢP TRÊN HỆ THỐNG: ${allData.length}`],
+        [],
+        headers, 
+        ...rows
+      ]);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "DanhSachTuyenSinh");
+      XLSX.writeFile(wb, `Danh_sach_tuyen_sinh_toan_he_thong_${Date.now()}.xlsx`);
+    } catch (error) {
+      console.error("Lỗi xuất excel:", error);
+      alert("Đã xảy ra lỗi khi tải dữ liệu xuất Excel.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleExportTuitionExcel = () => {
@@ -1124,7 +1159,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       ];
     });
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const ws = XLSX.utils.aoa_to_sheet([
+      [`TỔNG SỐ HỒ SƠ HỌC PHÍ (ĐÃ XUẤT RA EXCEL): ${approvedSubmissions.length}`],
+      [],
+      headers, 
+      ...rows
+    ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "QuanLyHocPhi");
     XLSX.writeFile(wb, `Danh_sach_hoc_phi_${Date.now()}.xlsx`);
