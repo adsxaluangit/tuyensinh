@@ -356,7 +356,22 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <InputGroup label="Số CCCD/CMND" required>
-                <input type="text" required placeholder="Số định danh 12 số" className={inputClasses} disabled={isEditing} value={formData.idNumber} onChange={(e) => setFormData({ ...formData, idNumber: e.target.value })} />
+                <input 
+                  type="text" 
+                  pattern="\d{12}" 
+                  minLength={12} 
+                  maxLength={12} 
+                  title="Vui lòng nhập chính xác 12 chữ số" 
+                  required 
+                  placeholder="Số định danh 12 số" 
+                  className={inputClasses} 
+                  disabled={isEditing} 
+                  value={formData.idNumber} 
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 12);
+                    setFormData({ ...formData, idNumber: val });
+                  }} 
+                />
               </InputGroup>
               <InputGroup label="Dân tộc" required>
                 <input type="text" required placeholder="Dân tộc" className={inputClasses} value={formData.ethnicity} onChange={(e) => setFormData({ ...formData, ethnicity: e.target.value })} />

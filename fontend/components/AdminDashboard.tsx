@@ -200,7 +200,7 @@ const TuitionPaidInput: React.FC<{
   return (
     <input
       type="text"
-      className="w-32 bg-white border border-gray-200 rounded-lg px-2 py-1 text-right font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500/20"
+      className="w-24 bg-white border border-gray-200 rounded-lg px-2 py-1 text-right font-bold text-emerald-600 outline-none focus:ring-2 focus:ring-emerald-500/20"
       value={localValue}
       onChange={handleChange}
     />
@@ -1854,7 +1854,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
               <table className="w-full text-left">
                 <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
-                  <tr><th className="px-4 py-4">Mã số (CCCD)</th><th className="px-4 py-4">Họ và tên</th><th className="px-4 py-4">SĐT</th><th className="px-4 py-4">Nghề đào tạo</th><th className="px-4 py-4 text-center">Học phí</th><th className="px-4 py-4 text-center">BH Y Tế</th><th className="px-4 py-4 text-center">BH Toàn Diện</th><th className="px-4 py-4 text-center">Đồng Phục</th><th className="px-4 py-4 text-center">Đã nộp</th><th className="px-4 py-4 text-center">Còn lại</th><th className="px-4 py-4 text-center">In Hóa đơn</th><th className="px-4 py-4 text-center">Ghi chú</th></tr>
+                  <tr><th className="px-2 py-4 w-[110px]">Mã số (CCCD)</th><th className="px-4 py-4">Họ và tên</th><th className="px-4 py-4">SĐT</th><th className="px-4 py-4 min-w-[140px]">Nghề đào tạo</th><th className="px-4 py-4 text-center">Học phí</th><th className="px-4 py-4 text-center">BH Y Tế</th><th className="px-4 py-4 text-center">BH Toàn Diện</th><th className="px-4 py-4 text-center">Đồng Phục</th><th className="px-2 py-4 text-center w-[110px]">Đã nộp</th><th className="px-4 py-4 text-center">Còn lại</th><th className="px-4 py-4 text-center">In Hóa đơn</th><th className="px-4 py-4 text-center">Ghi chú</th></tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {isTuitionLoading ? (
@@ -1883,15 +1883,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
                       return (
                         <tr key={s.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 text-xs font-mono text-gray-400">{s.idNumber}</td>
+                          <td className="px-2 py-4 text-xs font-mono text-gray-400 break-all w-[110px] whitespace-nowrap">{s.idNumber}</td>
                           <td className="px-4 py-4 font-bold text-blue-900">{s.fullName}</td>
                           <td className="px-4 py-4 text-gray-600">{s.phone}</td>
-                          <td className="px-4 py-4 font-medium text-gray-700 uppercase text-[11px]">{s.choice1Major}</td>
+                          <td className="px-4 py-4 font-medium text-gray-700 uppercase text-[11px] min-w-[140px]">{s.choice1Major}</td>
                           <td className="px-4 py-4 text-center font-bold text-gray-900">{(s.tuitionAmount || 0).toLocaleString('vi-VN')}</td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-blue-600 cursor-pointer" checked={s.isHealthSelected} onChange={(e) => handleFeeSelect('isHealthSelected', e.target.checked)} /><span className={`font-bold text-blue-600 ${!s.isHealthSelected && 'opacity-30'}`}>{(s.healthAmount || 0).toLocaleString('vi-VN')}</span></div></td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-orange-600 cursor-pointer" checked={s.isComprehensiveSelected} onChange={(e) => handleFeeSelect('isComprehensiveSelected', e.target.checked)} /><span className={`font-bold text-orange-600 ${!s.isComprehensiveSelected && 'opacity-30'}`}>{(s.comprehensiveAmount || 0).toLocaleString('vi-VN')}</span></div></td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-slate-600 cursor-pointer" checked={s.isUniformSelected} onChange={(e) => handleFeeSelect('isUniformSelected', e.target.checked)} /><span className={`font-bold text-slate-600 ${!s.isUniformSelected && 'opacity-30'}`}>{(s.uniformAmount || 0).toLocaleString('vi-VN')}</span></div></td>
-                          <td className="px-4 py-4 text-center">
+                          <td className="px-2 py-4 text-center w-[110px]">
                             <TuitionPaidInput
                               key={`${s.id}-${s.tuitionPaidAmount}`}
                               initialValue={s.tuitionPaidAmount || 0}
