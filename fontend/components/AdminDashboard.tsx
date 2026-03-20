@@ -1199,6 +1199,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       if (refreshed?.data) {
         setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId }));
       }
+      
+      if (status === SubmissionStatus.RECEIVED) {
+        alert("Đã tiếp nhận hồ sơ");
+      }
     } catch (error) {
       alert("Lỗi khi cập nhật trạng thái");
     }

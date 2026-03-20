@@ -23,13 +23,35 @@ interface OccupationConfig {
 }
 
 const App: React.FC = () => {
-  const [view, setView] = useState<'form' | 'login' | 'admin' | 'student-login'>('form');
+  const [view, setView] = useState<'form' | 'login' | 'admin' | 'student-login'>(() => {
+    return (localStorage.getItem('tuyensinh_view') as 'form' | 'login' | 'admin' | 'student-login') || 'form';
+  });
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [studentIdInput, setStudentIdInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem('tuyensinh_user');
+    try {
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  // Persistent Session
+  useEffect(() => {
+    localStorage.setItem('tuyensinh_view', view);
+  }, [view]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('tuyensinh_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('tuyensinh_user');
+    }
+  }, [currentUser]);
 
   // Master Data from Settings
   const [masterOccupations, setMasterOccupations] = useState<OccupationConfig[]>([]);
