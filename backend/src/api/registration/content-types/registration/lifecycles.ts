@@ -4,7 +4,7 @@ export default {
   async beforeUpdate(event) {
     const { params } = event;
     const { data, where } = params;
-    
+
 
     // Extract and handle the sync flag immediately to avoid validation errors
     const syncAmounts = data?.syncAmounts;
@@ -17,7 +17,7 @@ export default {
         const id = where?.id;
 
         let existing: any = null;
-        
+
         if (documentId) {
           existing = await strapi.documents('api::registration.registration').findOne({
             documentId,
@@ -44,33 +44,33 @@ export default {
           const occupationFilters: any = {
             name: { $eq: existing.choice1Major }
           };
-          
+
           if (existing.campus) {
-             const campusDocId = existing.campus.documentId || (typeof existing.campus === 'string' ? existing.campus : null);
-             const campusId = existing.campus.id || (typeof existing.campus === 'number' ? existing.campus : null);
-             
-             if (campusDocId) {
-                 occupationFilters.campus = { documentId: { $eq: campusDocId } };
-             } else if (campusId) {
-                 occupationFilters.campus = { id: { $eq: campusId } };
-             }
+            const campusDocId = existing.campus.documentId || (typeof existing.campus === 'string' ? existing.campus : null);
+            const campusId = existing.campus.id || (typeof existing.campus === 'number' ? existing.campus : null);
+
+            if (campusDocId) {
+              occupationFilters.campus = { documentId: { $eq: campusDocId } };
+            } else if (campusId) {
+              occupationFilters.campus = { id: { $eq: campusId } };
+            }
           }
           if (existing.educationLevel) {
-             const levelDocId = existing.educationLevel.documentId || (typeof existing.educationLevel === 'string' ? existing.educationLevel : null);
-             const levelId = existing.educationLevel.id || (typeof existing.educationLevel === 'number' ? existing.educationLevel : null);
-             
-             if (levelDocId) {
-                 occupationFilters.educationLevel = { documentId: { $eq: levelDocId } };
-             } else if (levelId) {
-                 occupationFilters.educationLevel = { id: { $eq: levelId } };
-             }
+            const levelDocId = existing.educationLevel.documentId || (typeof existing.educationLevel === 'string' ? existing.educationLevel : null);
+            const levelId = existing.educationLevel.id || (typeof existing.educationLevel === 'number' ? existing.educationLevel : null);
+
+            if (levelDocId) {
+              occupationFilters.educationLevel = { documentId: { $eq: levelDocId } };
+            } else if (levelId) {
+              occupationFilters.educationLevel = { id: { $eq: levelId } };
+            }
           }
 
           const occupations = await strapi.documents('api::occupation.occupation').findMany({
             filters: occupationFilters,
             limit: 1
           });
-          
+
           if (occupations && occupations.length > 0) {
             data.tuitionAmount = occupations[0].amount;
           } else {
@@ -103,7 +103,7 @@ export default {
           if (uniforms && uniforms.length > 0) {
             data.uniformAmount = uniforms[0].amount;
           }
-          
+
           console.log(`[Lifecycle] Populated amounts for ${existing.idNumber}: Tuition=${data.tuitionAmount}, Health=${data.healthAmount}, Comp=${data.comprehensiveAmount}, Uniform=${data.uniformAmount}`);
         }
       } catch (error) {
@@ -120,7 +120,7 @@ export default {
     if (params.data && params.data.status === 'Trúng tuyển') {
       try {
         console.log(`[Lifecycle] Processing status "Trúng tuyển" for registration ${result.idNumber || result.id}...`);
-        
+
         // Use document service instead of entityService for Strapi 5 compatibility
         const registration = await strapi.documents('api::registration.registration').findOne({
           documentId: result.documentId,
@@ -161,7 +161,7 @@ export default {
               </div>
 
               <p>Nếu có bất kỳ thắc mắc nào, vui lòng liên hệ Ban Tuyển sinh để được hỗ trợ.</p>
-              <p>Điện thoại liên hệ: 0916883118.</p>
+              <p>Điện thoại liên hệ: 0981.344.488- 0987.493.486.</p>
               <p>Trân trọng,</p>
               <p><strong>Ban Tuyển sinh</strong><br>Trường Cao đẳng Hàng hải và Đường thủy I</p>
             </div>

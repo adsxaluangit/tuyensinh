@@ -342,7 +342,10 @@ const App: React.FC = () => {
                 <DateSelector required value={formData.dob} onChange={(val) => setFormData({ ...formData, dob: val })} />
               </InputGroup>
               <InputGroup label="Nơi sinh" required>
-                <input type="text" required placeholder="Tỉnh/Thành phố" className={inputClasses} value={formData.pob} onChange={(e) => setFormData({ ...formData, pob: e.target.value })} />
+                <select className={selectClasses} required value={formData.pob} onChange={(e) => setFormData({ ...formData, pob: e.target.value })}>
+                  <option value="">Tỉnh/Thành phố</option>
+                  {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
               </InputGroup>
               <InputGroup label="Giới tính" required>
                 <select className={selectClasses} required value={formData.gender} onChange={(e) => setFormData({ ...formData, gender: e.target.value })}>
