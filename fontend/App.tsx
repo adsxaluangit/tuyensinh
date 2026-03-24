@@ -98,11 +98,13 @@ const App: React.FC = () => {
   const [files, setFiles] = useState<{
     frontId: string | null;
     backId: string | null;
+    electronicId: string | null;
     diploma: string | null;
     tempCert: string | null;
   }>({
     frontId: null,
     backId: null,
+    electronicId: null,
     diploma: null,
     tempCert: null
   });
@@ -165,7 +167,7 @@ const App: React.FC = () => {
     const levelObj = availableLevels.find(l => l.name === formData.educationLevel);
 
     // Validate required files
-    if (!files.frontId || !files.backId || !files.diploma || !files.tempCert) {
+    if (!files.frontId || !files.backId || !files.diploma || !files.tempCert || !files.electronicId) {
       alert('Vui lòng tải lên đầy đủ các giấy tờ xác thực bắt buộc (*)');
       return;
     }
@@ -262,6 +264,7 @@ const App: React.FC = () => {
           setFiles({
             frontId: record.frontId || null,
             backId: record.backId || null,
+            electronicId: record.electronicId || null,
             diploma: record.diploma || null,
             tempCert: record.tempCert || null,
           });
@@ -538,9 +541,10 @@ const App: React.FC = () => {
           </FormSection>
 
           <FormSection title="TẢI LÊN GIẤY TỜ XÁC THỰC">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-10">
               <FileUpload label="CCCD mặt trước" required placeholderImage={files.frontId || "/assets/cccd_front.png"} onFileChange={(b64) => setFiles({ ...files, frontId: b64 })} />
               <FileUpload label="CCCD mặt sau" required placeholderImage={files.backId || "/assets/cccd_back.png"} onFileChange={(b64) => setFiles({ ...files, backId: b64 })} />
+              <FileUpload label="Căn cước Điện tử" required placeholderImage={files.electronicId || "/assets/cccd_front.png"} onFileChange={(b64) => setFiles({ ...files, electronicId: b64 })} />
               <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "/assets/diploma.png"} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
               <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "/assets/transcript.png"} onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
             </div>
