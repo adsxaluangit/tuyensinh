@@ -494,8 +494,8 @@ const App: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
                 {SUBJECTS.map((sub) => (
                   <div key={sub} className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold text-gray-500 text-center uppercase">{sub}</label>
-                    <input type="text" placeholder="-" className="w-full bg-blue-50/20 border-2 border-blue-500/10 rounded-xl px-2 py-2 text-sm text-center font-bold text-blue-900 focus:border-blue-500 outline-none transition-all shadow-sm" value={grades[sub]} onChange={(e) => setGrades({ ...grades, [sub]: e.target.value })} />
+                    <label className="text-[10px] font-bold text-gray-500 text-center uppercase">{sub} <span className="text-red-500">*</span></label>
+                    <input type="text" required placeholder="-" className="w-full bg-blue-50/20 border-2 border-blue-500/10 rounded-xl px-2 py-2 text-sm text-center font-bold text-blue-900 focus:border-blue-500 outline-none transition-all shadow-sm" value={grades[sub]} onChange={(e) => setGrades({ ...grades, [sub]: e.target.value })} />
                   </div>
                 ))}
               </div>
