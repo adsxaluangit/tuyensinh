@@ -5,10 +5,11 @@ interface FileUploadProps {
   label: string;
   required?: boolean;
   placeholderImage: string;
+  helperText?: string;
   onFileChange?: (base64: string | null) => void;
 }
 
-const FileUpload: React.FC<FileUploadProps> = ({ label, required, placeholderImage, onFileChange }) => {
+const FileUpload: React.FC<FileUploadProps> = ({ label, required, placeholderImage, helperText, onFileChange }) => {
   const [fileName, setFileName] = useState('Không có tệp nào được chọn');
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -64,6 +65,11 @@ const FileUpload: React.FC<FileUploadProps> = ({ label, required, placeholderIma
           {fileName}
         </span>
       </div>
+      {helperText && (
+        <p className="text-[10px] text-red-500 font-bold leading-tight mt-1 text-center italic">
+          {helperText}
+        </p>
+      )}
     </div>
   );
 };
