@@ -1721,7 +1721,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const generateAdmissionNoticePdf = async (fragment: string): Promise<string> => {
     const opt = {
-      margin: 10,
+      margin: 0,
       filename: 'Giay_bao_nhap_hoc.pdf',
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
