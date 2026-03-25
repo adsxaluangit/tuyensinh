@@ -439,10 +439,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
       const templateData = await api.fetchAdmissionTemplates();
       if (templateData && templateData.length > 0) {
-        setAdmissionTemplates(templateData.map((t: any) => ({
-          ...t,
-          id: t.documentId || t.id
-        })));
+        const templateRecord: Record<string, AdmissionTemplate> = {};
+        templateData.forEach((t: any) => {
+          const item = t.attributes || t;
+          templateRecord[item.campus] = {
+            ...item,
+            id: t.documentId || t.id
+          };
+        });
+        setAdmissionTemplates(prev => ({ ...prev, ...templateRecord }));
       }
 
       const settings = await api.fetchSystemSettings();
@@ -1600,164 +1605,156 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const totalAmt = tAmt + hAmt + cAmt;
 
     return `
-      <html>
-        <head>
-          <title>${template.title} - ${submission.fullName}</title>
-          <style>
-            @page { size: A4; margin: 0; }
-            html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
-            body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #000; line-height: 1.15; font-size: 13pt; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; }
-            .page-container { width: 210mm; height: 297mm; padding: 15mm 15mm 15mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; position: relative; }
-            .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
-            .header-left { text-align: center; width: 48%; }
-            .header-right { text-align: center; width: 48%; }
-            .school-name-small { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 1px; white-space: nowrap; }
-            .school-name-large { font-weight: bold; font-size: 11pt; text-transform: uppercase; line-height: 1.1; }
-            .line-under { border-bottom: 1.5px solid #000; display: inline-block; width: 55%; margin-top: 1px; }
-            .doc-number { font-size: 11pt; margin-top: 5px; }
-            .nation-name { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 1px; }
-            .nation-slogan { font-weight: bold; font-size: 12pt; margin-bottom: 0px; }
-            .doc-date { font-style: italic; font-size: 12pt; text-align: right; margin-top: 5px; }
-            .main-title { text-align: center; font-weight: bold; font-size: 15pt; margin: 20px 0 10px 0; text-transform: uppercase; }
-            .basis { text-align: justify; font-style: italic; font-size: 12pt; margin-bottom: 10px; line-height: 1.15; }
-            .announcer { text-align: center; font-weight: bold; font-size: 12pt; margin-bottom: 20px; text-transform: uppercase; }
-            .content-row { margin-bottom: 5px; display: flex; align-items: baseline; }
-            .label { width: 210px; flex-shrink: 0; }
-            .value { font-weight: bold; }
-            .full-width-row { margin: 8px 0; text-align: justify; }
-            .section-bold { font-weight: bold; margin: 3px 0 3px 0; font-size: 13pt; }
-            .requirement-item { margin-bottom: 1px; padding-left: 0px; text-align: justify; font-weight: bold; line-height: 1.15; }
-            .fees-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
-            .fees-table th, .fees-table td { border: 1px solid black; padding: 4px 8px; font-size: 12pt; }
-            .fees-table th { text-align: center; font-weight: bold; }
-            .center { text-align: center; }
-            .right { text-align: right; }
-            .bold { font-weight: bold; }
-            .contact-info { margin-top: 5px; font-style: italic; font-size: 12pt; text-align: justify; line-height: 1.15; }
-            .contact-info b { font-weight: bold; font-style: normal; }
-            .footer-area { display: flex; justify-content: space-between; margin-top: 10px; align-items: flex-start; padding-bottom: 5mm; }
-            .qr-side { width: 45%; display: flex; flex-direction: column; align-items: flex-start; }
-            .qr-box { width: 110px; height: 110px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; overflow: hidden; }
-            .qr-box img { width: 100%; height: 100%; object-fit: contain; }
-            .qr-label { font-size: 9pt; line-height: 1.2; text-align: left; font-style: italic; font-weight: bold; }
-            .signature-side { width: 50%; text-align: center; }
-            .sig-title { font-weight: bold; text-transform: uppercase; margin-bottom: 100px; white-space: pre-line; line-height: 1.1; font-size: 12pt; }
-            .sig-name { font-weight: bold; font-size: 13pt; }
-            @media print { .no-print { display: none; } body, .page-container { -webkit-print-color-adjust: exact; } }
-          </style>
-        </head>
-        <body>
-          <div class="page-container">
-            <div class="header-top">
-              <div class="header-left">
-                <div class="school-name-small">CỤC HÀNG HẢI VÀ ĐƯỜNG THỦY VIỆT NAM</div>
-                <div class="school-name-large">TRƯỜNG CAO ĐẲNG<br>HÀNG HẢI VÀ ĐƯỜNG THỦY I</div>
-                <div><div class="line-under"></div></div>
-                <div class="doc-number">Số: ${displayNum}/GTT-CĐHHĐTI</div>
-              </div>
-              <div class="header-right">
-                <div class="nation-name">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div class="nation-slogan">Độc lập - Tự do - Hạnh phúc</div>
-                <div><div class="line-under"></div></div>
-                <div class="doc-date">Hải Phòng, ngày ${currentDay} tháng ${currentMonth} năm ${currentYear}</div>
-              </div>
-            </div>
-            <div class="main-title">${template.title}</div>
-            <div class="basis">${template.basis}</div>
-            <div class="announcer">${template.announcer}</div>
-            <div class="content-row">
-              <span class="label">Báo cho thí sinh:</span>
-              <span class="value" style="font-size: 14pt;">${submission.fullName}</span>
-              <span style="margin-left: auto;">Ngày sinh: <span class="value">${new Date(submission.dob).toLocaleDateString('vi-VN')}</span></span>
-            </div>
-            <div class="content-row">
-              <span class="label">Địa chỉ thường trú:</span>
-              <span class="value">${submission.addressDetails}, ${submission.district}, ${submission.province}</span>
-            </div>
-            <div class="full-width-row">Đã trúng tuyển vào Trường Cao đẳng Hàng hải và Đường thủy I, trình độ <b>${submission.educationLevel || 'Cao đẳng'}</b> năm ${currentYear};</div>
-            <div class="content-row">
-              <span class="label">Nghề đào tạo đăng ký học:</span>
-              <span class="value">${submission.choice1Major} (Mã: ${submission.choice1Specialty})</span>
-            </div>
-            <div class="content-row">
-              <span class="label">Thời gian nhập học:</span>
-              <span class="value">${template.admissionHour || '........'} giờ, ngày ${template.admissionDay || '....'} tháng ${template.admissionMonth || '....'} năm ${template.admissionYear || '....'}</span>
-            </div>
-            <div class="content-row">
-              <span class="label">Địa điểm nhập học:</span>
-              <span style="font-size: 11pt;">${template.location}</span>
-            </div>
-            <div class="section-bold">Khi đến trường nhập học, thí sinh cần mang theo:</div>
-            ${template.requirements.map((req: any, idx: number) => `<div class="requirement-item">${idx + 1}. ${req}</div>`).join('')}
-            <div class="section-bold">7. Các khoản thu:</div>
-            <table class="fees-table">
-              <thead>
-                <tr>
-                  <th width="8%">STT</th>
-                  <th width="67%">Tên khoản nộp</th>
-                  <th width="25%">Cộng</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td class="center">1</td><td>Học phí học kỳ 1</td><td class="right">${tAmt > 0 ? tAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
-                <tr><td class="center">2</td><td>Phí bảo hiểm Y tế (1 năm)</td><td class="right">${hAmt > 0 ? hAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
-                <tr><td class="center">3</td><td>Phí bảo hiểm Toàn diện (1 năm)</td><td class="right">${cAmt > 0 ? cAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
-                <tr class="bold">
-                  <td colspan="2" class="center">TỔNG CỘNG:</td>
-                  <td class="right">${totalAmt > 0 ? totalAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="contact-info">Để biết thêm thông tin chi tiết thí sinh liên hệ với phòng <b>Công tác HS-SV</b>, Hotline: <b>${template.hotline}</b> hoặc xem trên Website: <b>${template.website}</b></div>
-            <div class="footer-area">
-              <div class="qr-side">
-                <div class="qr-box"><img src="${qrSrc}" alt="QR Map" /></div>
-                <div class="qr-label">Quét mã để xem đường đi<br>đến Trường CĐ HH&ĐT I</div>
-              </div>
-              <div class="signature-side">
-                <div class="sig-title">${template.footerTitle}</div>
-                <div class="sig-name">${template.footerName}</div>
-              </div>
-            </div>
+      <div class="admission-notice-container" style="font-family: Arial, sans-serif; color: #000; line-height: 1.15; font-size: 13pt; width: 210mm; min-height: 297mm; padding: 15mm 15mm 15mm 20mm; box-sizing: border-box; background: white;">
+        <style>
+          .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
+          .header-left { text-align: center; width: 48%; }
+          .header-right { text-align: center; width: 48%; }
+          .school-name-small { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 1px; white-space: nowrap; }
+          .school-name-large { font-weight: bold; font-size: 11pt; text-transform: uppercase; line-height: 1.1; }
+          .line-under { border-bottom: 1.5px solid #000; display: inline-block; width: 55%; margin-top: 1px; }
+          .doc-number { font-size: 11pt; margin-top: 5px; }
+          .nation-name { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 1px; }
+          .nation-slogan { font-weight: bold; font-size: 12pt; margin-bottom: 0px; }
+          .doc-date { font-style: italic; font-size: 12pt; text-align: right; margin-top: 5px; }
+          .main-title { text-align: center; font-weight: bold; font-size: 15pt; margin: 20px 0 10px 0; text-transform: uppercase; }
+          .basis { text-align: justify; font-style: italic; font-size: 12pt; margin-bottom: 10px; line-height: 1.15; }
+          .announcer { text-align: center; font-weight: bold; font-size: 12pt; margin-bottom: 20px; text-transform: uppercase; }
+          .content-row { margin-bottom: 5px; display: flex; align-items: baseline; }
+          .label { width: 210px; flex-shrink: 0; }
+          .value { font-weight: bold; }
+          .full-width-row { margin: 8px 0; text-align: justify; }
+          .section-bold { font-weight: bold; margin: 3px 0 3px 0; font-size: 13pt; }
+          .requirement-item { margin-bottom: 1px; padding-left: 0px; text-align: justify; font-weight: bold; line-height: 1.15; }
+          .fees-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+          .fees-table th, .fees-table td { border: 1px solid black; padding: 4px 8px; font-size: 12pt; }
+          .fees-table th { text-align: center; font-weight: bold; }
+          .center { text-align: center; }
+          .right { text-align: right; }
+          .bold { font-weight: bold; }
+          .contact-info { margin-top: 5px; font-style: italic; font-size: 12pt; text-align: justify; line-height: 1.15; }
+          .contact-info b { font-weight: bold; font-style: normal; }
+          .footer-area { display: flex; justify-content: space-between; margin-top: 10px; align-items: flex-start; }
+          .qr-side { width: 45%; display: flex; flex-direction: column; align-items: flex-start; }
+          .qr-box { width: 110px; height: 110px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; overflow: hidden; }
+          .qr-box img { width: 100%; height: 100%; object-fit: contain; }
+          .qr-label { font-size: 9pt; line-height: 1.2; text-align: left; font-style: italic; font-weight: bold; }
+          .signature-side { width: 50%; text-align: center; }
+          .sig-title { font-weight: bold; text-transform: uppercase; margin-bottom: 100px; white-space: pre-line; line-height: 1.1; font-size: 12pt; }
+          .sig-name { font-weight: bold; font-size: 13pt; }
+        </style>
+        
+        <div class="header-top">
+          <div class="header-left">
+            <div class="school-name-small">CỤC HÀNG HẢI VÀ ĐƯỜNG THỦY VIỆT NAM</div>
+            <div class="school-name-large">TRƯỜNG CAO ĐẲNG<br>HÀNG HẢI VÀ ĐƯỜNG THỦY I</div>
+            <div><div class="line-under"></div></div>
+            <div class="doc-number">Số: ${displayNum}/GTT-CĐHHĐTI</div>
           </div>
-        </body>
-      </html>
+          <div class="header-right">
+            <div class="nation-name">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+            <div class="nation-slogan">Độc lập - Tự do - Hạnh phúc</div>
+            <div><div class="line-under"></div></div>
+            <div class="doc-date">Hải Phòng, ngày ${currentDay} tháng ${currentMonth} năm ${currentYear}</div>
+          </div>
+        </div>
+        <div class="main-title">${template.title}</div>
+        <div class="basis">${template.basis}</div>
+        <div class="announcer">${template.announcer}</div>
+        <div class="content-row">
+          <span class="label">Báo cho thí sinh:</span>
+          <span class="value" style="font-size: 14pt;">${submission.fullName}</span>
+          <span style="margin-left: auto;">Ngày sinh: <span class="value">${new Date(submission.dob).toLocaleDateString('vi-VN')}</span></span>
+        </div>
+        <div class="content-row">
+          <span class="label">Địa chỉ thường trú:</span>
+          <span class="value">${submission.addressDetails}, ${submission.district}, ${submission.province}</span>
+        </div>
+        <div class="full-width-row">Đã trúng tuyển vào Trường Cao đẳng Hàng hải và Đường thủy I, trình độ <b>${submission.educationLevel || 'Cao đẳng'}</b> năm ${currentYear};</div>
+        <div class="content-row">
+          <span class="label">Nghề đào tạo đăng ký học:</span>
+          <span class="value">${submission.choice1Major} (Mã: ${submission.choice1Specialty})</span>
+        </div>
+        <div class="content-row">
+          <span class="label">Thời gian nhập học:</span>
+          <span class="value">${template.admissionHour || '........'} giờ, ngày ${template.admissionDay || '....'} tháng ${template.admissionMonth || '....'} năm ${template.admissionYear || '....'}</span>
+        </div>
+        <div class="content-row">
+          <span class="label">Địa điểm nhập học:</span>
+          <span style="font-size: 11pt;">${template.location}</span>
+        </div>
+        <div class="section-bold">Khi đến trường nhập học, thí sinh cần mang theo:</div>
+        ${template.requirements?.map((req: any, idx: number) => `<div class="requirement-item">${idx + 1}. ${req}</div>`).join('') || ''}
+        <div class="section-bold">7. Các khoản thu:</div>
+        <table class="fees-table">
+          <thead>
+            <tr>
+              <th width="8%">STT</th>
+              <th width="67%">Tên khoản nộp</th>
+              <th width="25%">Cộng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td class="center">1</td><td>Học phí học kỳ 1</td><td class="right">${tAmt > 0 ? tAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
+            <tr><td class="center">2</td><td>Phí bảo hiểm Y tế (1 năm)</td><td class="right">${hAmt > 0 ? hAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
+            <tr><td class="center">3</td><td>Phí bảo hiểm Toàn diện (1 năm)</td><td class="right">${cAmt > 0 ? cAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
+            <tr class="bold">
+              <td colspan="2" class="center">TỔNG CỘNG:</td>
+              <td class="right">${totalAmt > 0 ? totalAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="contact-info">Để biết thêm thông tin chi tiết thí sinh liên hệ với phòng <b>Công tác HS-SV</b>, Hotline: <b>${template.hotline}</b> hoặc xem trên Website: <b>${template.website}</b></div>
+        <div class="footer-area">
+          <div class="qr-side">
+            <div class="qr-box"><img src="${qrSrc}" alt="QR Map" /></div>
+            <div class="qr-label">Quét mã để xem đường đi<br>đến Trường CĐ HH&ĐT I</div>
+          </div>
+          <div class="signature-side">
+            <div class="sig-title">${template.footerTitle}</div>
+            <div class="sig-name">${template.footerName}</div>
+          </div>
+        </div>
+      </div>
     `;
   };
 
-  const generateAdmissionNoticePdf = async (html: string): Promise<string> => {
+  const generateAdmissionNoticePdf = async (fragment: string): Promise<string> => {
     const opt = {
-      margin: 0,
+      margin: 10,
       filename: 'Giay_bao_nhap_hoc.pdf',
       image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
     };
 
-    const element = document.createElement('div');
-    element.innerHTML = html;
-    element.style.position = 'fixed';
-    element.style.left = '-10000px';
-    element.style.top = '0';
-    document.body.appendChild(element);
-
     try {
-      const pdfBase64 = await html2pdf().set(opt).from(element).outputPdf('datauristring');
+      // Use the string directly which is supported by html2pdf
+      const pdfBase64 = await html2pdf().set(opt).from(fragment).outputPdf('datauristring');
       return pdfBase64;
-    } finally {
-      document.body.removeChild(element);
+    } catch (err) {
+      console.error("Lỗi tạo PDF:", err);
+      return "";
     }
   };
 
   const renderPrintWindow = (template: AdmissionTemplate, submission: any, docNumber?: string) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
-    const html = getAdmissionNoticeHtml(template, submission, docNumber);
-    printWindow.document.write(html);
+    const fragment = getAdmissionNoticeHtml(template, submission, docNumber);
     printWindow.document.write(`
-      <script>
-        window.onload = () => { setTimeout(() => { window.print(); window.onafterprint = () => window.close(); }, 300); };
-      </script>
+      <html>
+        <head>
+          <title>${template.title} - ${submission.fullName}</title>
+          <style>@page { size: A4; margin: 0; } body { margin: 0; padding: 0; }</style>
+        </head>
+        <body>
+          ${fragment}
+          <script>
+            window.onload = () => { setTimeout(() => { window.print(); window.onafterprint = () => window.close(); }, 300); };
+          </script>
+        </body>
+      </html>
     `);
     printWindow.document.close();
   };
