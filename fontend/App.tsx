@@ -342,7 +342,28 @@ const App: React.FC = () => {
                 <input type="text" required placeholder="Nhập họ và tên" className={inputClasses} value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
               </InputGroup>
               <InputGroup label="Ngày sinh" required>
-                <DateSelector required value={formData.dob} onChange={(val) => setFormData({ ...formData, dob: val })} />
+                <DateSelector 
+                required 
+                value={formData.dob} 
+                onChange={(val) => {
+                  if (val) {
+                    const birthDate = new Date(val);
+                    const today = new Date();
+                    let age = today.getFullYear() - birthDate.getFullYear();
+                    const m = today.getMonth() - birthDate.getMonth();
+                    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                      age--;
+                    }
+                    
+                    if (age < 15) {
+                      alert("Bạn không đủ tuổi để nhập học (Yêu cầu từ 15 tuổi trở lên)");
+                      setFormData({ ...formData, dob: '' });
+                      return;
+                    }
+                  }
+                  setFormData({ ...formData, dob: val });
+                }} 
+              />
               </InputGroup>
               <InputGroup label="Nơi sinh" required>
                 <select className={selectClasses} required value={formData.pob} onChange={(e) => setFormData({ ...formData, pob: e.target.value })}>
