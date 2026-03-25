@@ -1233,6 +1233,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     }
   };
 
+  const handleDeleteSingle = async (docId: string) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa hồ sơ này? Thao tác này không thể hoàn tác.")) {
+      try {
+        await api.deleteRegistration(docId);
+        alert("Đã xóa hồ sơ thành công.");
+        fetchData();
+      } catch (error) {
+        console.error("Error deleting registration:", error);
+        alert("Có lỗi xảy ra khi xóa hồ sơ.");
+      }
+    }
+  };
+
   const updateCurrentSubmissionStatus = async (status: SubmissionStatus) => {
     if (!selectedSubmission?.docId) return;
     try {
@@ -1890,7 +1903,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                         <td className="px-4 py-4"><span className="bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-purple-100 uppercase whitespace-nowrap tracking-wider">{s.educationLevel}</span></td>
                         <td className="px-4 py-4"><div className="flex flex-col"><span className="text-gray-950 font-black text-[11px] leading-tight block max-w-[180px] uppercase">{s.choice1Major}</span><span className="text-gray-400 text-[9px] font-bold uppercase mt-0.5">Mã nghề: {s.choice1Specialty}</span></div></td>
                         <td className="px-4 py-4 text-center"><span className={`inline-block px-3 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-widest whitespace-nowrap ${getStatusStyle(s.status)}`}>{s.status}</span></td>
-                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => handleViewDetail(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button><button onClick={() => handleViewDetail(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button></div></td>
+                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => handleViewDetail(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button><button onClick={() => handleViewDetail(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button><button onClick={() => handleDeleteSingle(s.docId)} className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-all" title="Xóa hồ sơ"><DeleteIcon /></button></div></td>
                       </tr>
                     ))}
                   </tbody>
