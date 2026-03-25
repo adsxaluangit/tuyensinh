@@ -1508,101 +1508,108 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = async (evt) => {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        try {
+          const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-        const rows = data.slice(1) as any[];
-        if (rows.length === 0) return alert('File không có dữ liệu!');
-
-        let successCount = 0;
-        let failCount = 0;
-        let errors: string[] = [];
-
-        setIsLoading(true);
-        console.log('Đang bắt đầu nhập dữ liệu từ Excel...');
-
-        for (let i = 0; i < rows.length; i++) {
-          const row = rows[i];
-          const code = row[0]?.toString().trim() || '';
-          const name = row[1]?.toString().trim() || '';
-          const campusName = (row[2]?.toString() || '').trim();
-          const levelName = (row[3]?.toString() || '').trim();
-          const amountStr = row[4]?.toString().replace(/[^\d]/g, '') || '0';
-          const amount = parseInt(amountStr);
-
-          // Skip empty rows
-          if (!code && !name && !campusName) continue;
-
-          if (!code || !name) {
-            errors.push(`Dòng ${i + 2}: Thiếu Mã nghề hoặc Tên nghề.`);
-            failCount++;
-            continue;
+          if (!jsonData || jsonData.length < 2) {
+            return alert('File không có dữ liệu hoặc định dạng không đúng!');
           }
 
-          // Tìm ID tương ứng cho campus và educationLevel (không phân biệt hoa thường, trim kỹ)
-          const campus = campusConfigs.find(c => 
-            c.name.trim().toLowerCase() === campusName.toLowerCase() || 
-            c.code.trim().toLowerCase() === campusName.toLowerCase()
-          );
-          
-          const level = educationLevelConfigs.find(l => 
-            l.name.trim().toLowerCase() === levelName.toLowerCase() ||
-            l.code.trim().toLowerCase() === levelName.toLowerCase()
-          );
+          const headers = jsonData[0].map(h => (h?.toString() || '').trim().toLowerCase());
+          const rows = jsonData.slice(1);
 
-          if (!campus) {
-            errors.push(`Dòng ${i + 2}: Không tìm thấy Cơ sở "${campusName}". Vui lòng kiểm tra lại tên cơ sở trong hệ thống.`);
-            failCount++;
-            continue;
-          }
-          if (!level) {
-            errors.push(`Dòng ${i + 2}: Không tìm thấy Hệ đào tạo "${levelName}". Vui lòng kiểm tra lại tên hệ đào tạo trong hệ thống.`);
-            failCount++;
-            continue;
-          }
-
-          const configData = {
-            code,
-            name,
-            amount,
-            campus: campus.id,
-            educationLevel: level.id
+          // Find column indices by header name
+          const colMap = {
+            code: headers.findIndex(h => h.includes('mã nghề')),
+            name: headers.findIndex(h => h.includes('tên nghề')),
+            campus: headers.findIndex(h => h.includes('cơ sở')),
+            level: headers.findIndex(h => h.includes('hệ')),
+            amount: headers.findIndex(h => h.includes('học phí')),
           };
 
-          try {
-            await api.createOccupation(configData);
-            successCount++;
-          } catch (error) {
-            console.error(`Lỗi khi nhập ngành ${name}:`, error);
-            errors.push(`Dòng ${i + 2}: Lỗi hệ thống khi lưu "${name}". (Có thể mã nghề đã tồn tại)`);
-            failCount++;
+          if (colMap.code === -1 || colMap.name === -1) {
+            return alert('Không tìm thấy cột "Mã nghề" hoặc "Tên nghề" trong file!');
           }
-        }
 
-        setIsLoading(false);
+          setIsLoading(true);
+          let successCount = 0;
+          let failCount = 0;
+          let errors: string[] = [];
 
-        if (successCount > 0 || failCount > 0) {
-          let msg = `KẾT QUẢ NHẬP DỮ LIỆU:\n--------------------\n- Thành công: ${successCount}\n- Thất bại: ${failCount}`;
-          if (errors.length > 0) {
-            msg += `\n\nCHI TIẾT LỖI (20 dòng đầu):\n${errors.slice(0, 20).join('\n')}`;
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const code = (colMap.code !== -1 ? row[colMap.code]?.toString().trim() : '') || '';
+            const name = (colMap.name !== -1 ? row[colMap.name]?.toString().trim() : '') || '';
+            const campusName = (colMap.campus !== -1 ? row[colMap.campus]?.toString().trim() : '') || '';
+            const levelName = (colMap.level !== -1 ? row[colMap.level]?.toString().trim() : '') || '';
+            const amountStr = (colMap.amount !== -1 ? row[colMap.amount]?.toString().replace(/[^\d]/g, '') : '0') || '0';
+            const amount = parseInt(amountStr);
+
+            if (!code && !name) continue; // Skip empty rows
+
+            if (!code || !name) {
+              errors.push(`Dòng ${i + 2}: Thiếu Mã nghề hoặc Tên nghề.`);
+              failCount++;
+              continue;
+            }
+
+            const campus = campusConfigs.find(c => 
+              c.name.trim().toLowerCase() === campusName.toLowerCase() || 
+              c.code.trim().toLowerCase() === campusName.toLowerCase()
+            );
+            
+            const level = educationLevelConfigs.find(l => 
+              l.name.trim().toLowerCase() === levelName.toLowerCase() ||
+              l.code.trim().toLowerCase() === levelName.toLowerCase()
+            );
+
+            if (!campus) {
+              errors.push(`Dòng ${i + 2}: Cơ sở "${campusName}" không tồn tại trong hệ thống.`);
+              failCount++;
+              continue;
+            }
+            if (!level) {
+              errors.push(`Dòng ${i + 2}: Hệ đào tạo "${levelName}" không tồn tại trong hệ thống.`);
+              failCount++;
+              continue;
+            }
+
+            try {
+              await api.createOccupation({
+                code,
+                name,
+                amount,
+                campus: campus.id,
+                educationLevel: level.id
+              });
+              successCount++;
+            } catch (error) {
+              errors.push(`Dòng ${i + 2}: Lỗi khi lưu "${name}" - Có thể mã nghề bị trùng.`);
+              failCount++;
+            }
           }
-          alert(msg);
+
+          setIsLoading(false);
+          alert(`NHẬP DỮ LIỆU HOÀN TẤT:\n- Thành công: ${successCount}\n- Thất bại: ${failCount}${errors.length > 0 ? '\n\n' + errors.slice(0, 10).join('\n') : ''}`);
           if (successCount > 0) fetchData();
+
+        } catch (err) {
+          console.error("Lỗi đọc file:", err);
+          alert("Lỗi khi đọc file Excel. Vui lòng thử lại với định dạng .xlsx chuẩn.");
         }
 
         if (fileInputRef.current) fileInputRef.current.value = '';
       };
-      reader.readAsBinaryString(file);
+      reader.readAsArrayBuffer(file);
     }
   };
 
   const handleDownloadTemplate = () => {
     const headers = ['Mã nghề', 'Tên nghề đào tạo', 'Cơ sở', 'Hệ', 'Học phí'];
-    
-    // Lấy tên cơ sở và hệ đầu tiên để làm mẫu thực tế (nếu có)
     const sampleCampus = campusConfigs.length > 0 ? campusConfigs[0].name : 'Hải Phòng';
     const sampleLevel = educationLevelConfigs.length > 0 ? educationLevelConfigs[0].name : 'Cao đẳng';
     
@@ -1613,20 +1620,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
-
-    // Thêm ghi chú vào file (tùy chọn, ở đây ta thêm một sheet hướng dẫn)
-    const guideHeaders = ['Trường dữ liệu', 'Yêu cầu', 'Ví dụ'];
-    const guideData = [
-      ['Mã nghề', 'Bắt buộc, không được trùng', 'K7648020101'],
-      ['Tên nghề đào tạo', 'Bắt buộc, tên đầy đủ của ngành', 'Công nghệ thông tin'],
-      ['Cơ sở', 'Bắt buộc, phải khớp với tên cơ sở trong hệ thống', sampleCampus],
-      ['Hệ', 'Bắt buộc, phải khớp với tên hệ đào tạo trong hệ thống', sampleLevel],
-      ['Học phí', 'Số tiền, không bao gồm dấu chấm/phẩy', '5000000']
-    ];
-    const wsGuide = XLSX.utils.aoa_to_sheet([guideHeaders, ...guideData]);
     
-    XLSX.utils.book_append_sheet(wb, ws, 'Mau_nhap_hoc_phi');
-    XLSX.utils.book_append_sheet(wb, wsGuide, 'Huong_dan_nhap_lieu');
+    XLSX.utils.book_append_sheet(wb, ws, 'Du_lieu_nhap');
+    
+    // Thêm sheet Hướng dẫn
+    const guide = [
+      ['TRƯỜNG DỮ LIỆU', 'YÊU CẦU', 'GIÁ TRỊ HIỆN CÓ TRONG HỆ THỐNG'],
+      ['Mã nghề', 'Bắt buộc, duy nhất', ''],
+      ['Tên nghề đào tạo', 'Bắt buộc', ''],
+      ['Cơ sở', 'Bắt buộc, phải khớp tên', campusConfigs.map(c => c.name).join(', ')],
+      ['Hệ', 'Bắt buộc, phải khớp tên', educationLevelConfigs.map(l => l.name).join(', ')],
+      ['Học phí', 'Số tiền (số nguyên)', '']
+    ];
+    const wsGuide = XLSX.utils.aoa_to_sheet(guide);
+    XLSX.utils.book_append_sheet(wb, wsGuide, 'Huong_dan');
     
     XLSX.writeFile(wb, 'Mau_cau_hinh_hoc_phi.xlsx');
   };
