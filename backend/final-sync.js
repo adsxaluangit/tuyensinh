@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 
 async function sync() {
     const pgClient = new Client({
-        host: '127.0.0.1', port: 5432, database: 'tuyensinh', user: 'postgres', password: '123456',
+        host: '127.0.0.1', port: 5435, database: 'tuyensinh_db', user: 'tuyensinh', password: 'tuyensinh_password',
     });
 
     try {

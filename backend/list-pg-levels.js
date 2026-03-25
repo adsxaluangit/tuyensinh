@@ -1,12 +1,14 @@
 
 const { Client } = require('pg');
 async function checkLevels() {
-    const client = new Client({ host: '127.0.0.1', port: 5432, database: 'tuyensinh', user: 'postgres', password: '123456' });
+    const pgClient = new Client({
+        host: '127.0.0.1', port: 5435, database: 'tuyensinh_db', user: 'tuyensinh', password: 'tuyensinh_password',
+    });
     try {
-        await client.connect();
-        const res = await client.query('SELECT name FROM education_levels');
+        await pgClient.connect();
+        const res = await pgClient.query('SELECT name FROM education_levels');
         console.log('Postgres Levels:', res.rows);
-        await client.end();
+        await pgClient.end();
     } catch (err) { console.error(err); }
 }
 checkLevels();
