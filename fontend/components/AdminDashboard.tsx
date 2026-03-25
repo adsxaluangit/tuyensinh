@@ -1605,7 +1605,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const totalAmt = tAmt + hAmt + cAmt;
 
     return `
-      <div class="admission-notice-container" style="font-family: Arial, sans-serif; color: #000; line-height: 1.15; font-size: 13pt; width: 210mm; min-height: 297mm; padding: 15mm 15mm 15mm 20mm; box-sizing: border-box; background: white;">
+      <div class="admission-notice-container" style="font-family: Arial, sans-serif; color: #000; line-height: 1.15; font-size: 13pt; width: 210mm; min-height: 297mm; padding: 5mm 15mm 15mm 10mm; box-sizing: border-box; background: white;">
         <style>
           .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
           .header-left { text-align: center; width: 48%; }
