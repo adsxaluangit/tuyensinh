@@ -523,6 +523,9 @@ const App: React.FC = () => {
                   </div>
                 ))}
               </div>
+              <p className="text-[11px] text-red-600 font-bold italic mt-4 text-center">
+                * Ghi chú: Các môn không thuộc phân ban đã học thì điền số "0"
+              </p>
             </div>
           </FormSection>
 
