@@ -46,13 +46,12 @@ export default {
         console.log('Cấp quyền thành công!');
       }
 
-      /*
       // Bulk publish existing draft registrations in background
       setTimeout(async () => {
         try {
           const drafts = await strapi.documents('api::registration.registration').findMany({
             status: 'draft',
-            fields: ['id'],
+            fields: ['documentId'], // Changed to documentId for Strapi 5
           });
 
           if (drafts.length > 0) {
@@ -69,8 +68,7 @@ export default {
         } catch (err) {
           console.error('[Background] Lỗi xuất bản hồ sơ:', err);
         }
-      }, 30000); // 30s delay
-      */
+      }, 10000); // 10s delay instead of 30s
 
     } catch (error) {
       console.error('Lỗi bootstrap:', error);
