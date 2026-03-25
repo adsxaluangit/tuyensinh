@@ -1521,29 +1521,45 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         let failCount = 0;
         let errors: string[] = [];
 
+        setIsLoading(true);
         console.log('Đang bắt đầu nhập dữ liệu từ Excel...');
 
-        for (const row of rows) {
-          const code = row[0]?.toString() || '';
-          const name = row[1]?.toString() || '';
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+          const code = row[0]?.toString().trim() || '';
+          const name = row[1]?.toString().trim() || '';
           const campusName = (row[2]?.toString() || '').trim();
           const levelName = (row[3]?.toString() || '').trim();
           const amountStr = row[4]?.toString().replace(/[^\d]/g, '') || '0';
           const amount = parseInt(amountStr);
 
-          if (!code || !name) continue;
+          // Skip empty rows
+          if (!code && !name && !campusName) continue;
 
-          // Tìm ID tương ứng cho campus và educationLevel
-          const campus = campusConfigs.find(c => c.name.trim().toLowerCase() === campusName.toLowerCase());
-          const level = educationLevelConfigs.find(l => l.name.trim().toLowerCase() === levelName.toLowerCase());
+          if (!code || !name) {
+            errors.push(`Dòng ${i + 2}: Thiếu Mã nghề hoặc Tên nghề.`);
+            failCount++;
+            continue;
+          }
+
+          // Tìm ID tương ứng cho campus và educationLevel (không phân biệt hoa thường, trim kỹ)
+          const campus = campusConfigs.find(c => 
+            c.name.trim().toLowerCase() === campusName.toLowerCase() || 
+            c.code.trim().toLowerCase() === campusName.toLowerCase()
+          );
+          
+          const level = educationLevelConfigs.find(l => 
+            l.name.trim().toLowerCase() === levelName.toLowerCase() ||
+            l.code.trim().toLowerCase() === levelName.toLowerCase()
+          );
 
           if (!campus) {
-            errors.push(`Dòng ${rows.indexOf(row) + 2}: Không tìm thấy cơ sở "${campusName}"`);
+            errors.push(`Dòng ${i + 2}: Không tìm thấy Cơ sở "${campusName}". Vui lòng kiểm tra lại tên cơ sở trong hệ thống.`);
             failCount++;
             continue;
           }
           if (!level) {
-            errors.push(`Dòng ${rows.indexOf(row) + 2}: Không tìm thấy hệ đào tạo "${levelName}"`);
+            errors.push(`Dòng ${i + 2}: Không tìm thấy Hệ đào tạo "${levelName}". Vui lòng kiểm tra lại tên hệ đào tạo trong hệ thống.`);
             failCount++;
             continue;
           }
@@ -1561,15 +1577,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             successCount++;
           } catch (error) {
             console.error(`Lỗi khi nhập ngành ${name}:`, error);
-            errors.push(`Dòng ${rows.indexOf(row) + 2}: Lỗi hệ thống khi lưu "${name}"`);
+            errors.push(`Dòng ${i + 2}: Lỗi hệ thống khi lưu "${name}". (Có thể mã nghề đã tồn tại)`);
             failCount++;
           }
         }
 
+        setIsLoading(false);
+
         if (successCount > 0 || failCount > 0) {
-          let msg = `Kết quả nhập dữ liệu:\n- Thành công: ${successCount}\n- Thất bại: ${failCount}`;
+          let msg = `KẾT QUẢ NHẬP DỮ LIỆU:\n--------------------\n- Thành công: ${successCount}\n- Thất bại: ${failCount}`;
           if (errors.length > 0) {
-            msg += `\n\nChi tiết lỗi (20 dòng đầu):\n${errors.slice(0, 20).join('\n')}`;
+            msg += `\n\nCHI TIẾT LỖI (20 dòng đầu):\n${errors.slice(0, 20).join('\n')}`;
           }
           alert(msg);
           if (successCount > 0) fetchData();
@@ -1583,13 +1601,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const handleDownloadTemplate = () => {
     const headers = ['Mã nghề', 'Tên nghề đào tạo', 'Cơ sở', 'Hệ', 'Học phí'];
+    
+    // Lấy tên cơ sở và hệ đầu tiên để làm mẫu thực tế (nếu có)
+    const sampleCampus = campusConfigs.length > 0 ? campusConfigs[0].name : 'Hải Phòng';
+    const sampleLevel = educationLevelConfigs.length > 0 ? educationLevelConfigs[0].name : 'Cao đẳng';
+    
     const sampleData = [
-      ['001', 'LẬP TRÌNH WEB', 'Nam Đồng', 'Cao đẳng', '5000000'],
-      ['002', 'LẬP TRÌNH MOBILE', 'Nam Đồng', 'Trung cấp', '4500000']
+      ['K7648020101', 'CÔNG NGHỆ THÔNG TIN (ỨNG DỤNG PHẦN MỀM)', sampleCampus, sampleLevel, '5000000'],
+      ['K7648020102', 'LẬP TRÌNH WEB', sampleCampus, sampleLevel, '4500000']
     ];
+
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
+
+    // Thêm ghi chú vào file (tùy chọn, ở đây ta thêm một sheet hướng dẫn)
+    const guideHeaders = ['Trường dữ liệu', 'Yêu cầu', 'Ví dụ'];
+    const guideData = [
+      ['Mã nghề', 'Bắt buộc, không được trùng', 'K7648020101'],
+      ['Tên nghề đào tạo', 'Bắt buộc, tên đầy đủ của ngành', 'Công nghệ thông tin'],
+      ['Cơ sở', 'Bắt buộc, phải khớp với tên cơ sở trong hệ thống', sampleCampus],
+      ['Hệ', 'Bắt buộc, phải khớp với tên hệ đào tạo trong hệ thống', sampleLevel],
+      ['Học phí', 'Số tiền, không bao gồm dấu chấm/phẩy', '5000000']
+    ];
+    const wsGuide = XLSX.utils.aoa_to_sheet([guideHeaders, ...guideData]);
+    
     XLSX.utils.book_append_sheet(wb, ws, 'Mau_nhap_hoc_phi');
+    XLSX.utils.book_append_sheet(wb, wsGuide, 'Huong_dan_nhap_lieu');
+    
     XLSX.writeFile(wb, 'Mau_cau_hinh_hoc_phi.xlsx');
   };
 
