@@ -55,8 +55,8 @@ const App: React.FC = () => {
 
   // Master Data from Settings
   const [masterOccupations, setMasterOccupations] = useState<OccupationConfig[]>([]);
-  const [availableCampuses, setAvailableCampuses] = useState<{ id: string, name: string }[]>([]);
-  const [availableLevels, setAvailableLevels] = useState<{ id: string, name: string }[]>([]);
+  const [availableCampuses, setAvailableCampuses] = useState<{ id: string, numericId: number, name: string }[]>([]);
+  const [availableLevels, setAvailableLevels] = useState<{ id: string, numericId: number, name: string }[]>([]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -118,10 +118,10 @@ const App: React.FC = () => {
     const fetchData = async () => {
       try {
         const campusesData = await api.fetchCampuses();
-        setAvailableCampuses(campusesData.map((c: any) => ({ id: c.documentId, name: c.name })));
+        setAvailableCampuses(campusesData.map((c: any) => ({ id: c.documentId, numericId: c.id, name: c.name })));
 
         const levelsData = await api.fetchEducationLevels();
-        setAvailableLevels(levelsData.map((l: any) => ({ id: l.documentId, name: l.name })));
+        setAvailableLevels(levelsData.map((l: any) => ({ id: l.documentId, numericId: l.id, name: l.name })));
 
         const occupationsData = await api.fetchOccupations();
         setMasterOccupations(occupationsData.map((o: any) => ({
@@ -194,8 +194,8 @@ const App: React.FC = () => {
       isHealthSelected: true,
       isComprehensiveSelected: true,
       isUniformSelected: true,
-      campus: campusObj?.id,
-      educationLevel: levelObj?.id,
+      campus: campusObj?.numericId,
+      educationLevel: levelObj?.numericId,
       grades: grades // Ensure grades is explicitly included
     });
 
