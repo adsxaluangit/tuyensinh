@@ -343,7 +343,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       alert('Bạn không có quyền truy cập chức năng này!');
       return;
     }
-    if (user?.role === 'Kế toán' && tab !== 'tuition') {
+    if (user?.role === 'Kế toán' && tab !== 'tuition' && tab !== 'submissions') {
       alert('Bạn không có quyền truy cập chức năng này!');
       return;
     }
@@ -1877,11 +1877,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   };
 
   const isAdmin = user?.role === 'Quản trị viên';
+  const isPowerUser = user?.role === 'Quản trị viên' || user?.role === 'Kế toán';
   const EditIcon = () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>);
   const DeleteIcon = () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2m-3 0h10" /></svg>);
 
-  const uniqueFilterCampuses = Array.from(new Set(tuitionConfigs.map(c => c.campus))).filter(Boolean).sort();
-  const uniqueFilterLevels = Array.from(new Set(tuitionConfigs.map(c => c.educationLevel))).filter(Boolean).sort();
+  const uniqueFilterCampuses = campusConfigs.map(c => c.name);
+  const uniqueFilterLevels = educationLevelConfigs.map(l => l.name);
   const uniqueFilterMajors = Array.from(new Set(tuitionConfigs.map(c => c.name))).filter(Boolean).sort();
 
   return (
@@ -1927,7 +1928,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
               <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 min-w-[120px]"><span className="text-[10px] text-blue-600 font-extrabold uppercase block mb-0.5">Tổng số</span><span className="text-xl font-black text-blue-900">{totalCount}</span></div>
-              <select disabled={!isAdmin} className={`bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} value={filterCampus} onChange={e => setFilterCampus(e.target.value)}><option value="">Tất cả cơ sở</option>{uniqueFilterCampuses.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              <select disabled={!isPowerUser} className={`bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none ${!isPowerUser ? 'opacity-50 cursor-not-allowed' : ''}`} value={filterCampus} onChange={e => setFilterCampus(e.target.value)}><option value="">Tất cả cơ sở</option>{uniqueFilterCampuses.map(c => <option key={c} value={c}>{c}</option>)}</select>
               <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none" value={filterLevel} onChange={e => setFilterLevel(e.target.value)}><option value="">Tất cả hệ đào tạo</option>{uniqueFilterLevels.map(l => <option key={l} value={l}>{l}</option>)}</select>
               <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none max-w-[200px]" value={filterMajor} onChange={e => setFilterMajor(e.target.value)}><option value="">Tất cả nghề đào tạo</option>{uniqueFilterMajors.map((m, idx) => <option key={idx} value={m}>{m}</option>)}</select>
               <button onClick={handleExportExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
@@ -2357,7 +2358,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Họ và tên</label><input name="fullName" defaultValue={editingUser?.fullName} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold text-blue-900" /></div>
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tên đăng nhập</label><input name="username" defaultValue={editingUser?.username} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-medium" /></div>
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Mật khẩu</label><input name="password" type="password" required={!editingUser} placeholder={editingUser ? "•••••••• (Bỏ trống nếu không đổi)" : "••••••••"} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-medium" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tên cơ sở {selectedRole !== 'Quản trị viên' && <span className="text-red-500">*</span>}</label><select name="campus" required={selectedRole !== 'Quản trị viên'} defaultValue={editingUser?.campus || ''} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="">-- Chọn cơ sở --</option>{CAMPUSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tên cơ sở {selectedRole !== 'Quản trị viên' && <span className="text-red-500">*</span>}</label><select name="campus" required={selectedRole !== 'Quản trị viên'} defaultValue={editingUser?.campus || ''} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="">-- Chọn cơ sở --</option>{campusConfigs.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div>
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Vai trò hệ thống</label><select name="role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as any)} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="Quản trị viên">Quản trị viên</option><option value="Cán bộ tiếp nhận">Cán bộ tiếp nhận</option><option value="Cán bộ duyệt hồ sơ">Cán bộ duyệt hồ sơ</option><option value="Kế toán">Kế toán</option></select></div>
               <div className="pt-4"><button type="submit" className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl">Lưu thông tin</button></div>
             </form>
