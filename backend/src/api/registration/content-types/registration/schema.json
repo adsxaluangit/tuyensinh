@@ -201,6 +201,9 @@
         },
         "syncAmounts": {
             "type": "boolean"
+        },
+        "admissionNoticePdf": {
+            "type": "text"
         }
     }
 }

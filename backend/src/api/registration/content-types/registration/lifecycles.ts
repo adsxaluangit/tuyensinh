@@ -137,6 +137,15 @@ export default {
         const eduLevel = regData.educationLevel?.name || 'Cao đẳng';
         const major = regData.choice1Major || 'Đã chọn';
 
+        const attachments = [];
+        if (regData.admissionNoticePdf && regData.admissionNoticePdf.includes('base64,')) {
+          attachments.push({
+            filename: `Giay_bao_nhap_hoc_${registration.fullName}_${registration.idNumber}.pdf`,
+            content: regData.admissionNoticePdf.split('base64,')[1],
+            encoding: 'base64',
+          });
+        }
+
         const htmlContent = `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;">
             <div style="background-color: #1e3a8a; color: #ffffff; padding: 20px; text-align: center;">
@@ -175,10 +184,11 @@ export default {
           to: registration.email,
           subject: '[GIẤY BÁO TRÚNG TUYỂN] - Trường Cao đẳng Hàng hải và Đường thủy I',
           html: htmlContent,
+          attachments: attachments.length > 0 ? attachments : undefined
         });
 
         const duration = Date.now() - startTime;
-        console.log(`[Lifecycle] Admission email sent to ${registration.email} for ID ${registration.idNumber} in ${duration}ms`);
+        console.log(`[Lifecycle] Admission email sent to ${registration.email} for ID ${registration.idNumber} ${attachments.length > 0 ? 'with attachment' : 'without attachment'} in ${duration}ms`);
       } catch (error) {
         console.error('[Lifecycle] Error sending admission email:', error);
       }

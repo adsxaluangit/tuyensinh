@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import html2pdf from 'html2pdf.js';
 import { FormData, RecipientType, AddressType, SubmissionStatus, User, TuitionStatus } from '../types';
 import { CAMPUSES, MAJORS, SPECIALTIES, EDUCATION_LEVELS, PROVINCES } from '../constants';
 import * as api from '../api';
@@ -961,7 +962,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         isHealthSelected: true,
         isComprehensiveSelected: true,
         isUniformSelected: true,
-        files: { frontId: null, backId: null, diploma: null, tempCert: null }
+        files: { frontId: null, backId: null, electronicId: null, diploma: null, tempCert: null }
       });
 
       // Avoid UI Freeze by breaking the task every 500 iterations
@@ -1252,6 +1253,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const handlePrintSubmission = async () => {
     if (!selectedSubmission) return;
     let currentSeq = selectedSubmission.docSeq;
+    const template = admissionTemplates[selectedSubmission.campus] || admissionTemplates['Hải Phòng'];
+
+    // Generate PDF for email attachment
+    let pdfBase64 = null;
+    try {
+      const html = getAdmissionNoticeHtml(template, { ...selectedSubmission, docSeq: currentSeq || '...' }, currentSeq || '..');
+      pdfBase64 = await generateAdmissionNoticePdf(html);
+    } catch (err) {
+      console.error("Lỗi tạo PDF:", err);
+    }
+
     if (!currentSeq) {
       const lastSeq = parseInt(localStorage.getItem('global_admission_seq') || '0');
       const nextSeq = lastSeq + 1;
@@ -1262,7 +1274,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         await api.updateRegistration(selectedSubmission.docId, {
           docSeq: currentSeq,
           status: SubmissionStatus.APPROVED,
-          syncAmounts: true
+          syncAmounts: true,
+          admissionNoticePdf: pdfBase64 // Phải gửi PDF khi duyệt
         });
 
         // Re-fetch data
@@ -1278,9 +1291,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         return;
       }
     } else {
-      await updateCurrentSubmissionStatus(SubmissionStatus.APPROVED);
+      // Nếu đã có số báo danh, chỉ cập nhật PDF và status (nếu cần)
+      try {
+        await api.updateRegistration(selectedSubmission.docId, {
+          status: SubmissionStatus.APPROVED,
+          admissionNoticePdf: pdfBase64
+        });
+        await updateCurrentSubmissionStatus(SubmissionStatus.APPROVED);
+      } catch (err) {
+        console.error("Lỗi cập nhật PDF:", err);
+      }
     }
-    const template = admissionTemplates[selectedSubmission.campus] || admissionTemplates['Hải Phòng'];
+    
     renderPrintWindow(template, { ...selectedSubmission, docSeq: currentSeq, status: SubmissionStatus.APPROVED }, currentSeq);
   };
 
@@ -1447,7 +1469,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       isHealthSelected: true,
       isComprehensiveSelected: true,
       isUniformSelected: true,
-      files: { frontId: null, backId: null, diploma: null, tempCert: null }
+      files: { frontId: null, backId: null, electronicId: null, diploma: null, tempCert: null }
     };
     if (admissionSubTab === 'Thu học phí') {
       handlePrintInvoice(dummySubmission);
@@ -1565,9 +1587,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     XLSX.writeFile(wb, 'Mau_cau_hinh_hoc_phi.xlsx');
   };
 
-  const renderPrintWindow = (template: AdmissionTemplate, submission: any, docNumber?: string) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+  const getAdmissionNoticeHtml = (template: AdmissionTemplate, submission: any, docNumber?: string) => {
     const now = new Date();
     const currentDay = now.getDate().toString().padStart(2, '0');
     const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -1579,7 +1599,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const cAmt = submission.isComprehensiveSelected ? (submission.comprehensiveAmount || 0) : 0;
     const totalAmt = tAmt + hAmt + cAmt;
 
-    printWindow.document.write(`
+    return `
       <html>
         <head>
           <title>${template.title} - ${submission.fullName}</title>
@@ -1668,7 +1688,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               <span style="font-size: 11pt;">${template.location}</span>
             </div>
             <div class="section-bold">Khi đến trường nhập học, thí sinh cần mang theo:</div>
-            ${template.requirements.map((req, idx) => `<div class="requirement-item">${idx + 1}. ${req}</div>`).join('')}
+            ${template.requirements.map((req: any, idx: number) => `<div class="requirement-item">${idx + 1}. ${req}</div>`).join('')}
             <div class="section-bold">7. Các khoản thu:</div>
             <table class="fees-table">
               <thead>
@@ -1700,11 +1720,44 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </div>
             </div>
           </div>
-          <script>
-            window.onload = () => { setTimeout(() => { window.print(); window.onafterprint = () => window.close(); }, 300); };
-          </script>
         </body>
       </html>
+    `;
+  };
+
+  const generateAdmissionNoticePdf = async (html: string): Promise<string> => {
+    const opt = {
+      margin: 0,
+      filename: 'Giay_bao_nhap_hoc.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    const element = document.createElement('div');
+    element.innerHTML = html;
+    element.style.position = 'fixed';
+    element.style.left = '-10000px';
+    element.style.top = '0';
+    document.body.appendChild(element);
+
+    try {
+      const pdfBase64 = await html2pdf().set(opt).from(element).outputPdf('datauristring');
+      return pdfBase64;
+    } finally {
+      document.body.removeChild(element);
+    }
+  };
+
+  const renderPrintWindow = (template: AdmissionTemplate, submission: any, docNumber?: string) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    const html = getAdmissionNoticeHtml(template, submission, docNumber);
+    printWindow.document.write(html);
+    printWindow.document.write(`
+      <script>
+        window.onload = () => { setTimeout(() => { window.print(); window.onafterprint = () => window.close(); }, 300); };
+      </script>
     `);
     printWindow.document.close();
   };
