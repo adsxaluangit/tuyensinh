@@ -560,10 +560,13 @@ const App: React.FC = () => {
                 <input type="checkbox" id="consent" required className="mt-1 w-6 h-6 text-blue-600 border-2 border-blue-500 rounded-lg cursor-pointer" checked={confirmations.dataConsent} onChange={(e) => setConfirmations({ ...confirmations, dataConsent: e.target.checked })} />
                 <label htmlFor="consent" className="text-xs text-gray-700 leading-relaxed font-semibold cursor-pointer">Tôi đồng ý cung cấp thông tin cá nhân cho nhà trường để phục vụ mục đích xét tuyển và nhập học theo quy định của pháp luật.</label>
               </div>
-              <div className="flex justify-center pt-10">
+              <div className="flex flex-col items-center pt-10 gap-4">
                 <button type="submit" disabled={!confirmations.truth || !confirmations.dataConsent} className={`px-20 py-5 rounded-[1.5rem] font-black text-white uppercase tracking-[0.2em] transition-all shadow-2xl ${confirmations.truth && confirmations.dataConsent ? 'bg-[#cc0000] hover:bg-red-700 hover:scale-105 active:scale-95' : 'bg-gray-300 cursor-not-allowed opacity-50'}`}>
                   {isEditing ? 'CẬP NHẬT HỒ SƠ' : 'GỬI HỒ SƠ ĐĂNG KÝ'}
                 </button>
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest mt-2">
+                  Mọi thắc mắc liên hệ: <span className="text-red-600">0981.344.488 - 0987.493.486</span>
+                </p>
               </div>
             </div>
           </FormSection>
