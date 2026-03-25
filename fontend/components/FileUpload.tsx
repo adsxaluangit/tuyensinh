@@ -66,7 +66,7 @@ const FileUpload: React.FC<FileUploadProps> = ({ label, required, placeholderIma
         </span>
       </div>
       {helperText && (
-        <p className="text-[10px] text-red-500 font-bold leading-tight mt-1 text-center italic">
+        <p className="text-[10px] text-red-500 font-bold leading-tight mt-1 text-center italic whitespace-pre-line">
           {helperText}
         </p>
       )}
