@@ -1015,7 +1015,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const filteredSubmissions = React.useMemo(() => {
     return submissions
       .filter(s => {
-        if (user?.role !== 'Quản trị viên') {
+        if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {
           if (!user?.campus || s.campus !== user.campus) return false;
         }
         const searchLower = searchTerm.toLowerCase();
@@ -1038,7 +1038,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const searchLower = searchTerm.toLowerCase();
     return tuitionSubmissions
       .filter(s => {
-        if (user?.role !== 'Quản trị viên') {
+        if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {
           if (!user?.campus || s.campus !== user.campus) return false;
         }
         return s.fullName.toLowerCase().includes(searchLower) ||
@@ -1079,7 +1079,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         campus: r.campus?.name || r.campus,
         educationLevel: r.educationLevel?.name || r.educationLevel
       })).filter((s: any) => {
-        if (user?.role !== 'Quản trị viên') {
+        if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {
           if (!user?.campus || s.campus !== user.campus) return false;
         }
         return true;
