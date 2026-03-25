@@ -41,7 +41,7 @@ const fetchAPI = async (path: string, options?: RequestInit) => {
 };
 
 export const fetchCampuses = async () => {
-    const data = await fetchAPI('/api/campuses');
+    const data = await fetchAPI('/api/campuses?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -66,7 +66,7 @@ export const deleteCampus = async (documentId: string) => {
 };
 
 export const fetchEducationLevels = async () => {
-    const data = await fetchAPI('/api/education-levels');
+    const data = await fetchAPI('/api/education-levels?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -206,7 +206,7 @@ export const deleteRegistration = async (documentId: string) => {
 
 // Health Insurance
 export const fetchHealthInsurances = async () => {
-    const data = await fetchAPI('/api/health-insurances');
+    const data = await fetchAPI('/api/health-insurances?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -232,7 +232,7 @@ export const deleteHealthInsurance = async (documentId: string) => {
 
 // Comprehensive Insurance
 export const fetchComprehensiveInsurances = async () => {
-    const data = await fetchAPI('/api/comprehensive-insurances');
+    const data = await fetchAPI('/api/comprehensive-insurances?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -258,7 +258,7 @@ export const deleteComprehensiveInsurance = async (documentId: string) => {
 
 // Uniform
 export const fetchUniforms = async () => {
-    const data = await fetchAPI('/api/uniforms');
+    const data = await fetchAPI('/api/uniforms?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -284,7 +284,7 @@ export const deleteUniform = async (documentId: string) => {
 
 // Staff
 export const fetchStaffs = async () => {
-    const data = await fetchAPI('/api/staffs');
+    const data = await fetchAPI('/api/staffs?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -310,7 +310,7 @@ export const deleteStaff = async (documentId: string) => {
 
 // Admission Template
 export const fetchAdmissionTemplates = async () => {
-    const data = await fetchAPI('/api/admission-templates');
+    const data = await fetchAPI('/api/admission-templates?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -330,7 +330,7 @@ export const updateAdmissionTemplate = async (documentId: string, data: any) => 
 
 // System Settings
 export const fetchSystemSettings = async () => {
-    const data = await fetchAPI('/api/system-settings');
+    const data = await fetchAPI('/api/system-settings?pagination[pageSize]=1000');
     return data.data;
 };
 

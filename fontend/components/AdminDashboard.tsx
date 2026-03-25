@@ -401,16 +401,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const occData = await api.fetchOccupations();
       setTuitionConfigs(occData.map((o: any) => {
         const item = o.attributes || o;
-        const campusObj = item.campus?.data?.attributes || item.campus?.attributes || item.campus;
-        const levelObj = item.educationLevel?.data?.attributes || item.educationLevel?.attributes || item.educationLevel;
+        
+        // Strapi 5 nested relation handle
+        const campusData = item.campus?.data?.attributes || item.campus?.data || item.campus?.attributes || item.campus;
+        const levelData = item.educationLevel?.data?.attributes || item.educationLevel?.data || item.educationLevel?.attributes || item.educationLevel;
 
         return {
           id: o.documentId || o.id,
           code: item.code,
           name: item.name,
-          amount: (item.amount !== undefined && item.amount !== null) ? item.amount : (item.attributes?.amount || 0),
-          campus: campusObj?.name || campusObj,
-          educationLevel: levelObj?.name || levelObj
+          amount: (item.amount !== undefined && item.amount !== null) ? item.amount : 0,
+          campus: campusData?.name || campusData,
+          educationLevel: levelData?.name || levelData
         };
       }));
 
