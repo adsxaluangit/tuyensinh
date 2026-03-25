@@ -385,6 +385,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const campusData = await api.fetchCampuses();
       setCampusConfigs(campusData.map((c: any) => ({
         id: c.documentId || c.id,
+        numericId: c.id,
         name: c.name || c.attributes?.name,
         code: c.code || c.attributes?.code,
         address: c.address || c.attributes?.address
@@ -393,6 +394,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const elData = await api.fetchEducationLevels();
       setEducationLevelConfigs(elData.map((l: any) => ({
         id: l.documentId || l.id,
+        numericId: l.id,
         name: l.name || l.attributes?.name,
         code: l.code || l.attributes?.code,
         description: l.description || l.attributes?.description
@@ -690,8 +692,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       code: fd.get('code') as string,
       name: fd.get('name') as string,
       amount: parseInt(fd.get('amount') as string) || 0,
-      campus: campus?.id,
-      educationLevel: level?.id
+      campus: (campus as any)?.numericId || campus?.id,
+      educationLevel: (level as any)?.numericId || level?.id
     };
 
     try {
@@ -1642,8 +1644,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 code,
                 name,
                 amount,
-                campus: campus.id,
-                educationLevel: level.id
+                campus: (campus as any)?.numericId || campus?.id,
+                educationLevel: (level as any)?.numericId || level?.id
               });
               successCount++;
             } catch (error) {
