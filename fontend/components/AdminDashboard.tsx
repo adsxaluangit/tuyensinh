@@ -305,6 +305,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   });
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [configSearchTerm, setConfigSearchTerm] = useState('');
   const [filterCampus, setFilterCampus] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
   const [filterMajor, setFilterMajor] = useState('');
@@ -2120,18 +2121,61 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </>
             ) : tuitionSubTab === 'majors' ? (
               <>
-                <div className="flex justify-end mb-4 gap-2">
-                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx, .xls" className="hidden" />
-                  <button onClick={handleDownloadTemplate} className="px-6 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button>
-                  <button onClick={handleExcelImport} className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>Nhập từ Excel</button>
-                  <button onClick={() => { setEditingTuition(null); setIsTuitionModalOpen(true); }} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức học phí</button>
+                <div className="flex justify-between items-center mb-4 gap-2">
+                  <div className="relative flex-1 max-w-sm">
+                    <input
+                      type="text"
+                      placeholder="Tìm mã nghề, tên nghề, cơ sở..."
+                      className="w-full bg-white border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm"
+                      value={configSearchTerm}
+                      onChange={e => setConfigSearchTerm(e.target.value)}
+                    />
+                    <svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex gap-2">
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx, .xls" className="hidden" />
+                    <button onClick={handleDownloadTemplate} className="px-6 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button>
+                    <button onClick={handleExcelImport} className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>Nhập từ Excel</button>
+                    <button onClick={() => { setEditingTuition(null); setIsTuitionModalOpen(true); }} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức học phí</button>
+                  </div>
                 </div>
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left">
                     <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
                       <tr><th className="px-6 py-4">Mã nghề</th><th className="px-6 py-4">Tên nghề đào tạo</th><th className="px-6 py-4">Cơ sở</th><th className="px-6 py-4">Hệ</th><th className="px-6 py-4 text-center">Học phí</th><th className="px-6 py-4 text-center">Thao tác</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">{tuitionConfigs.length === 0 ? (<tr><td colSpan={6} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình học phí nào</td></tr>) : (tuitionConfigs.map(config => (<tr key={config.id} className="hover:bg-gray-50/50 transition-colors"><td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td><td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td><td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td><td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td><td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td><td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td></tr>)))}</tbody>
+                    <tbody className="divide-y divide-gray-100">
+                      {tuitionConfigs.filter(config => {
+                        const searchLower = configSearchTerm.toLowerCase();
+                        return config.name.toLowerCase().includes(searchLower) ||
+                          config.code.toLowerCase().includes(searchLower) ||
+                          config.campus.toLowerCase().includes(searchLower) ||
+                          config.educationLevel.toLowerCase().includes(searchLower);
+                      }).length === 0 ? (
+                        <tr><td colSpan={6} className="px-8 py-10 text-center text-gray-400 italic">Không tìm thấy kết quả phù hợp</td></tr>
+                      ) : (
+                        tuitionConfigs
+                          .filter(config => {
+                            const searchLower = configSearchTerm.toLowerCase();
+                            return config.name.toLowerCase().includes(searchLower) ||
+                              config.code.toLowerCase().includes(searchLower) ||
+                              config.campus.toLowerCase().includes(searchLower) ||
+                              config.educationLevel.toLowerCase().includes(searchLower);
+                          })
+                          .map(config => (
+                            <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
+                              <td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td>
+                              <td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td>
+                              <td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td>
+                              <td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td>
+                              <td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td>
+                              <td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td>
+                            </tr>
+                          ))
+                      )}
+                    </tbody>
                   </table>
                 </div>
               </>
