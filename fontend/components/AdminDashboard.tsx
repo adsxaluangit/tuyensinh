@@ -1059,7 +1059,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     setTuitionPagination(prev => ({ ...prev, page: 1 }));
   }, [searchTerm]);
 
-  const handleExportExcel = async () => {
+    const handleExportExcel = async () => {
     if (totalCount === 0) return alert('Không có dữ liệu!');
     setIsLoading(true);
 
@@ -1108,15 +1108,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
         return [
           idx + 1,
-          s.submissionDate ? new Date(s.submissionDate).toLocaleDateString('vi-VN') : '',
+          formatDateValue(s.submissionDate),
           s.status,
           s.fullName,
           s.gender,
-          s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
+          formatDateValue(s.dob),
           s.pob,
           s.ethnicity,
           `'${s.idNumber}`,
-          s.issueDate ? new Date(s.issueDate).toLocaleDateString('vi-VN') : '',
+          formatDateValue(s.issueDate),
           s.issuePlace,
           `'${s.phone}`,
           s.email,
@@ -1781,7 +1781,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         <div class="content-row">
           <span class="label">Báo cho thí sinh:</span>
           <span class="value" style="font-size: 14pt;">${submission.fullName}</span>
-          <span style="margin-left: auto;">Ngày sinh: <span class="value">${new Date(submission.dob).toLocaleDateString('vi-VN')}</span></span>
+          <span style="margin-left: auto;">Ngày sinh: <span class="value">${new Date(submission.dob)}</span></span>
         </div>
         <div class="content-row">
           <span class="label">Địa chỉ thường trú:</span>
@@ -1887,6 +1887,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   };
 
   const isAdmin = user?.role === 'Quản trị viên';
+    const formatDateValue = (date: any) => {
+    if (!date) return '';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return '';
+    }
+  };
   const isPowerUser = user?.role === 'Quản trị viên' || user?.role === 'Kế toán';
   const EditIcon = () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>);
   const DeleteIcon = () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2m-3 0h10" /></svg>);
@@ -2476,7 +2489,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 <div className="lg:col-span-2 space-y-10">
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
                     <h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">1. Thông tin cá nhân & Liên hệ</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Giới tính" value={selectedSubmission.gender} /><DetailItem label="Ngày sinh" value={selectedSubmission.dob ? new Date(selectedSubmission.dob).toLocaleDateString('vi-VN') : '--'} /><DetailItem label="Nơi sinh" value={selectedSubmission.pob} /><DetailItem label="Dân tộc" value={selectedSubmission.ethnicity} /><DetailItem label="Ngày cấp CCCD" value={selectedSubmission.issueDate ? new Date(selectedSubmission.issueDate).toLocaleDateString('vi-VN') : '--'} /><DetailItem label="Nơi cấp" value={selectedSubmission.issuePlace} colSpan={2} /><DetailItem label="Số điện thoại" value={selectedSubmission.phone} highlight /><DetailItem label="Email" value={selectedSubmission.email} colSpan={2} /><DetailItem label="Họ tên phụ huynh" value={selectedSubmission.parentName} /><DetailItem label="SĐT phụ huynh" value={selectedSubmission.parentPhone} /></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Giới tính" value={selectedSubmission.gender} /><DetailItem label="Ngày sinh" value={selectedSubmission.dob ? new Date(selectedSubmission.dob) : '--'} /><DetailItem label="Nơi sinh" value={selectedSubmission.pob} /><DetailItem label="Dân tộc" value={selectedSubmission.ethnicity} /><DetailItem label="Ngày cấp CCCD" value={selectedSubmission.issueDate ? new Date(selectedSubmission.issueDate) : '--'} /><DetailItem label="Nơi cấp" value={selectedSubmission.issuePlace} colSpan={2} /><DetailItem label="Số điện thoại" value={selectedSubmission.phone} highlight /><DetailItem label="Email" value={selectedSubmission.email} colSpan={2} /><DetailItem label="Họ tên phụ huynh" value={selectedSubmission.parentName} /><DetailItem label="SĐT phụ huynh" value={selectedSubmission.parentPhone} /></div>
                   </div>
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">2. Địa chỉ thường trú (VNeID)</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Tỉnh / Thành phố" value={selectedSubmission.province} /><DetailItem label="Quận / Huyện, Xã / Phường" value={selectedSubmission.district} /><DetailItem label="Số nhà, đường, xóm" value={selectedSubmission.addressDetails} /></div></div>
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">3. Thông tin gửi giấy báo kết quả</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Người nhận" value={selectedSubmission.recipient} /><DetailItem label="Địa chỉ nhận" value={selectedSubmission.deliveryAddress} />{selectedSubmission.deliveryAddress === AddressType.OTHER && <DetailItem label="Địa chỉ chi tiết" value={selectedSubmission.deliveryAddressDetails} colSpan={2} />}</div></div>
