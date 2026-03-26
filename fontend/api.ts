@@ -157,7 +157,7 @@ export const fetchAllRegistrations = async (params: {
         'phone', 'email', 'addressDetails', 'province', 'district',
         'parentName', 'parentPhone', 
         'choice1Major', 'choice1Specialty', 'choice2Major', 'choice2Specialty',
-        'gradSchool', 'gradYear', 'diplomaNumber',
+        'gradSchool', 'gradYear', 'diplomaNumber', 'grades',
         'recipient', 'deliveryAddress', 'deliveryAddressDetails',
         'status', 'tuitionStatus', 'tuitionAmount', 'healthAmount', 'comprehensiveAmount', 'uniformAmount', 
         'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 

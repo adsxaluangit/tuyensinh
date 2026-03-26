@@ -1096,41 +1096,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         'Nguyện vọng 1', 'Mã nghề NV1',
         'Nguyện vọng 2', 'Mã nghề NV2',
         'Trường THPT/TC/CĐ', 'Năm tốt nghiệp', 'Xếp loại tốt nghiệp',
-        'Người nhận giấy báo', 'Địa chỉ nhận giấy báo', 'Chi tiết nới nhận'
+        'Người nhận giấy báo', 'Địa chỉ nhận giấy báo', 'Chi tiết nới nhận',
+        ...SUBJECTS.map(s => `Điểm ${s}`),
+        'Điểm trung bình'
       ];
 
-      const rows = allData.map((s: any, idx: number) => [
-        idx + 1,
-        s.submissionDate ? new Date(s.submissionDate).toLocaleDateString('vi-VN') : '',
-        s.status,
-        s.fullName,
-        s.gender,
-        s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
-        s.pob,
-        s.ethnicity,
-        `'${s.idNumber}`,
-        s.issueDate ? new Date(s.issueDate).toLocaleDateString('vi-VN') : '',
-        s.issuePlace,
-        `'${s.phone}`,
-        s.email,
-        s.addressDetails,
-        s.district,
-        s.province,
-        s.parentName,
-        `'${s.parentPhone}`,
-        s.campus,
-        s.educationLevel,
-        s.choice1Major,
-        s.choice1Specialty,
-        s.choice2Major || '',
-        s.choice2Specialty || '',
-        s.gradSchool,
-        s.gradYear,
-        s.diplomaNumber,
-        s.recipient,
-        s.deliveryAddress,
-        s.deliveryAddressDetails
-      ]);
+      const rows = allData.map((s: any, idx: number) => {
+        const grades = s.grades || {};
+        const sum = SUBJECTS.reduce((acc, sub) => acc + (parseFloat(grades[sub]) || 0), 0);
+        const avg = (sum / SUBJECTS.length).toFixed(2);
+
+        return [
+          idx + 1,
+          s.submissionDate ? new Date(s.submissionDate).toLocaleDateString('vi-VN') : '',
+          s.status,
+          s.fullName,
+          s.gender,
+          s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
+          s.pob,
+          s.ethnicity,
+          `'${s.idNumber}`,
+          s.issueDate ? new Date(s.issueDate).toLocaleDateString('vi-VN') : '',
+          s.issuePlace,
+          `'${s.phone}`,
+          s.email,
+          s.addressDetails,
+          s.district,
+          s.province,
+          s.parentName,
+          `'${s.parentPhone}`,
+          s.campus,
+          s.educationLevel,
+          s.choice1Major,
+          s.choice1Specialty,
+          s.choice2Major || '',
+          s.choice2Specialty || '',
+          s.gradSchool,
+          s.gradYear,
+          s.diplomaNumber,
+          s.recipient,
+          s.deliveryAddress,
+          s.deliveryAddressDetails,
+          ...SUBJECTS.map(sub => grades[sub] || '0'),
+          avg
+        ];
+      });
 
       const ws = XLSX.utils.aoa_to_sheet([
         [`TỔNG SỐ HỒ SƠ TỔNG HỢP TRÊN HỆ THỐNG: ${allData.length}`],
