@@ -222,28 +222,32 @@ const App: React.FC = () => {
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const staffs = await api.fetchStaffs();
-      const foundUser = staffs.find((u: any) => u.username === username && u.password === password && u.status === 'Hoạt động');
+      // 1. Hardcoded emergency admin check (optional but currently in your code)
+      if (username === 'admin' && password === 'admin123') {
+        setCurrentUser({ id: '0', fullName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString() });
+        setView('admin');
+        return;
+      }
 
-      if (foundUser) {
+      // 2. Secure server-side login
+      const response = await api.loginStaff(username, password);
+      
+      if (response && response.data) {
+        const foundUser = response.data;
         setCurrentUser({
           ...foundUser,
           id: foundUser.documentId || foundUser.id
         });
         setView('admin');
-      } else if (username === 'admin' && password === 'admin123') {
-        setCurrentUser({ id: '0', fullName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString() });
-        setView('admin');
       } else {
         setLoginError('Tên đăng nhập hoặc mật khẩu không chính xác (hoặc tài khoản đã bị khóa)');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      if (username === 'admin' && password === 'admin123') {
-        setCurrentUser({ id: '0', fullName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString() });
-        setView('admin');
+      if (error.message?.includes('401')) {
+        setLoginError('Tên đăng nhập hoặc mật khẩu không chính xác');
       } else {
-        setLoginError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+        setLoginError('Lỗi kết nối máy chủ hoặc tài khoản không tồn tại.');
       }
     }
   };

@@ -283,6 +283,13 @@ export const deleteUniform = async (documentId: string) => {
 };
 
 // Staff
+export const loginStaff = async (username: string, password: string) => {
+    return await fetchAPI('/api/staffs/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+    });
+};
+
 export const fetchStaffs = async () => {
     const data = await fetchAPI('/api/staffs?pagination[pageSize]=1000');
     return data.data;
