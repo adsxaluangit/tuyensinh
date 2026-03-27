@@ -141,14 +141,13 @@ const App: React.FC = () => {
 
   const getFilteredOccupations = (campus: string, level: string) => {
     if (!campus || !level) return [];
-    // Ưu tiên lọc theo cả cơ sở và hệ
-    const filtered = masterOccupations.filter(occ => occ.campus === campus && occ.educationLevel === level);
-    // Nếu không có cấu hình cụ thể cho hệ đó, hiển thị theo cơ sở
-    return filtered.length > 0 ? filtered : masterOccupations.filter(occ => occ.campus === campus);
+    // Lọc CHÍNH XÁC theo cả cơ sở VÀ hệ đào tạo - không fallback
+    return masterOccupations.filter(occ => occ.campus === campus && occ.educationLevel === level);
   };
 
   const choice1Occupations = getFilteredOccupations(formData.campus, formData.educationLevel);
   const choice2Occupations = getFilteredOccupations(formData.campus, formData.educationLevel);
+  const noOccupationsWarning = formData.campus && formData.educationLevel && choice1Occupations.length === 0;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -469,16 +468,22 @@ const App: React.FC = () => {
                 <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest opacity-60">Nguyện vọng thứ nhất</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <InputGroup label="Nghề đào tạo" required className="col-span-2">
-                    <select className={selectClasses} required value={formData.choice1Major} onChange={(e) => {
-                      const name = e.target.value;
-                      const occ = choice1Occupations.find(o => o.name === name);
-                      setFormData({ ...formData, choice1Major: name, choice1Specialty: occ?.code || '' })
-                    }}>
-                      <option value="">-- Chọn nghề --</option>
-                      {Array.from(new Set(choice1Occupations.map(o => o.name))).map(name => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
+                    {noOccupationsWarning ? (
+                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold">
+                        ⚠ Chưa có nghề đào tạo cho hệ "{formData.educationLevel}" tại "{formData.campus}"
+                      </div>
+                    ) : (
+                      <select className={selectClasses} required value={formData.choice1Major} onChange={(e) => {
+                        const name = e.target.value;
+                        const occ = choice1Occupations.find(o => o.name === name);
+                        setFormData({ ...formData, choice1Major: name, choice1Specialty: occ?.code || '' })
+                      }}>
+                        <option value="">-- Chọn nghề --</option>
+                        {Array.from(new Set(choice1Occupations.map(o => o.name))).map(name => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    )}
                   </InputGroup>
                   <InputGroup label="Mã nghề" required>
                     <input readOnly className={`${inputClasses} bg-gray-50 border-gray-200 cursor-not-allowed`} value={formData.choice1Specialty} placeholder="Mã nghề tự động" />
@@ -490,16 +495,22 @@ const App: React.FC = () => {
                 <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest opacity-60">Nguyện vọng thứ hai</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <InputGroup label="Nghề đào tạo" className="col-span-2">
-                    <select className={selectClasses} value={formData.choice2Major} onChange={(e) => {
-                      const name = e.target.value;
-                      const occ = choice2Occupations.find(o => o.name === name);
-                      setFormData({ ...formData, choice2Major: name, choice2Specialty: occ?.code || '' })
-                    }}>
-                      <option value="">-- Chọn nghề --</option>
-                      {Array.from(new Set(choice2Occupations.map(o => o.name))).map(name => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
+                    {noOccupationsWarning ? (
+                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold">
+                        ⚠ Chưa có nghề đào tạo
+                      </div>
+                    ) : (
+                      <select className={selectClasses} value={formData.choice2Major} onChange={(e) => {
+                        const name = e.target.value;
+                        const occ = choice2Occupations.find(o => o.name === name);
+                        setFormData({ ...formData, choice2Major: name, choice2Specialty: occ?.code || '' })
+                      }}>
+                        <option value="">-- Chọn nghề --</option>
+                        {Array.from(new Set(choice2Occupations.map(o => o.name))).map(name => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    )}
                   </InputGroup>
                   <InputGroup label="Mã nghề">
                     <input readOnly className={`${inputClasses} bg-gray-50 border-gray-200 cursor-not-allowed`} value={formData.choice2Specialty} placeholder="Mã nghề tự động" />
