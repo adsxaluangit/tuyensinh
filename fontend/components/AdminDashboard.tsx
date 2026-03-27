@@ -1576,7 +1576,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             code: headers.findIndex(h => h.includes('mã nghề')),
             name: headers.findIndex(h => h.includes('tên nghề')),
             campus: headers.findIndex(h => h.includes('cơ sở')),
-            level: headers.findIndex(h => h.includes('hệ')),
+            level: headers.findIndex(h =>
+              h.includes('hệ đào tạo') ||
+              h.includes('he dao tao') ||
+              h === 'hệ'
+            ),
             amount: headers.findIndex(h => h.includes('học phí')),
           };
 
@@ -1633,7 +1637,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               continue;
             }
             if (!level) {
-              errors.push(`Dòng ${i + 2}: Hệ đào tạo "${levelName}" không tồn tại.`);
+              const validLevels = educationLevelConfigs.map((l: any) => l.name).join(', ');
+              errors.push(`Dòng ${i + 2}: Hệ đào tạo "${levelName}" không hợp lệ. Hệ hợp lệ: [${validLevels}]`);
               failCount++;
               continue;
             }
@@ -1682,32 +1687,49 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ['Mã nghề', 'Tên nghề đào tạo', 'Cơ sở', 'Hệ', 'Học phí'];
-    const sampleCampus = campusConfigs.length > 0 ? campusConfigs[0].name : 'Hải Phòng';
-    const sampleLevel = educationLevelConfigs.length > 0 ? educationLevelConfigs[0].name : 'Cao đẳng';
-    
-    const sampleData = [
-      ['K7648020101', 'CÔNG NGHỆ THÔNG TIN (ỨNG DỤNG PHẦN MỀM)', sampleCampus, sampleLevel, '5000000'],
-      ['K7648020102', 'LẬP TRÌNH WEB', sampleCampus, sampleLevel, '4500000']
-    ];
+    const headers = ['Mã nghề', 'Tên nghề đào tạo', 'Cơ sở', 'Hệ đào tạo', 'Học phí'];
+
+    // Tạo dữ liệu mẫu: mỗi cơ sở x mỗi hệ đào tạo có 1 dòng mẫu
+    const sampleData: any[][] = [];
+    let sampleIdx = 1;
+    const campusList = campusConfigs.length > 0 ? campusConfigs : [{ name: 'Hải Phòng', code: 'HP' }];
+    const levelList  = educationLevelConfigs.length > 0 ? educationLevelConfigs : [{ name: 'Cao đẳng', code: 'CD' }];
+
+    campusList.forEach((campus: any) => {
+      levelList.forEach((level: any) => {
+        sampleData.push([
+          `K76480201${sampleIdx.toString().padStart(2, '0')}`,
+          'TÊN NGHỀ ĐÀO TẠO (ví dụ)',
+          campus.name,
+          level.name,
+          '5000000'
+        ]);
+        sampleIdx++;
+      });
+    });
 
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
-    
+    ws['!cols'] = [{ wch: 18 }, { wch: 50 }, { wch: 30 }, { wch: 25 }, { wch: 12 }];
     XLSX.utils.book_append_sheet(wb, ws, 'Du_lieu_nhap');
-    
-    // Thêm sheet Hướng dẫn
-    const guide = [
-      ['TRƯỜNG DỮ LIỆU', 'YÊU CẦU', 'GIÁ TRỊ HIỆN CÓ TRONG HỆ THỐNG'],
-      ['Mã nghề', 'Bắt buộc, duy nhất', ''],
-      ['Tên nghề đào tạo', 'Bắt buộc', ''],
-      ['Cơ sở', 'Bắt buộc, phải khớp tên', campusConfigs.map(c => c.name).join(', ')],
-      ['Hệ', 'Bắt buộc, phải khớp tên', educationLevelConfigs.map(l => l.name).join(', ')],
-      ['Học phí', 'Số tiền (số nguyên)', '']
+
+    // Sheet hướng dẫn
+    const campusValues = campusList.map((c: any) => c.name).join(', ');
+    const levelValues  = levelList.map((l: any) => l.name).join(', ');
+    const guide: any[][] = [
+      ['TRƯỜNG DỮ LIỆU', 'YÊU CẦU', 'GIÁ TRỊ HỢP LỆ (phải khớp chính xác)'],
+      ['Mã nghề', 'Bắt buộc – Duy nhất theo Cơ sở + Hệ', 'Chuỗi ký tự (vd: K7648020101)'],
+      ['Tên nghề đào tạo', 'Bắt buộc', 'Chuỗi ký tự tên nghề'],
+      ['Cơ sở', 'Bắt buộc – Phải khớp chính xác', campusValues],
+      ['Hệ đào tạo', 'Bắt buộc – Phải khớp chính xác', levelValues],
+      ['Học phí', 'Số nguyên (VNĐ)', 'vd: 5000000'],
+      [],
+      ['LƯU Ý QUAN TRỌNG', 'Cột "Hệ đào tạo" phải nhập đúng tên như cột bên phải. Sai tên sẽ bị BỎ QUA khi import.', '']
     ];
     const wsGuide = XLSX.utils.aoa_to_sheet(guide);
+    wsGuide['!cols'] = [{ wch: 22 }, { wch: 55 }, { wch: 50 }];
     XLSX.utils.book_append_sheet(wb, wsGuide, 'Huong_dan');
-    
+
     XLSX.writeFile(wb, 'Mau_cau_hinh_hoc_phi.xlsx');
   };
 
