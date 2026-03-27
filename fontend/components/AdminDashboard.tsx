@@ -405,7 +405,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const occData = await api.fetchOccupations();
       setTuitionConfigs(occData.map((o: any) => {
         const item = o.attributes || o;
-        
+
         // Strapi 5 nested relation handle
         const campusData = item.campus?.data?.attributes || item.campus?.data || item.campus?.attributes || item.campus;
         const levelData = item.educationLevel?.data?.attributes || item.educationLevel?.data || item.educationLevel?.attributes || item.educationLevel;
@@ -1061,7 +1061,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     setTuitionPagination(prev => ({ ...prev, page: 1 }));
   }, [searchTerm]);
 
-    const handleExportExcel = async () => {
+  const handleExportExcel = async () => {
     if (totalCount === 0) return alert('Không có dữ liệu!');
     setIsLoading(true);
 
@@ -1357,7 +1357,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         console.error("Lỗi cập nhật PDF:", err);
       }
     }
-    
+
     renderPrintWindow(template, { ...selectedSubmission, docSeq: currentSeq, status: SubmissionStatus.APPROVED }, currentSeq);
   };
 
@@ -1621,12 +1621,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             }
             processedCodes.add(rowKey);
 
-            const campus = campusConfigs.find(c => 
-              c.name.trim().toLowerCase() === campusName.toLowerCase() || 
+            const campus = campusConfigs.find(c =>
+              c.name.trim().toLowerCase() === campusName.toLowerCase() ||
               c.code.trim().toLowerCase() === campusName.toLowerCase()
             );
-            
-            const level = educationLevelConfigs.find(l => 
+
+            const level = educationLevelConfigs.find(l =>
               l.name.trim().toLowerCase() === levelName.toLowerCase() ||
               l.code.trim().toLowerCase() === levelName.toLowerCase()
             );
@@ -1644,9 +1644,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             }
 
             // Server-side check: Search if this occupation code exists for this campus/level
-            const existing = tuitionConfigs.find(occ => 
-              occ.code.toLowerCase() === code.toLowerCase() && 
-              occ.campus === campus.name && 
+            const existing = tuitionConfigs.find(occ =>
+              occ.code.toLowerCase() === code.toLowerCase() &&
+              occ.campus === campus.name &&
               occ.educationLevel === level.name
             );
 
@@ -1693,7 +1693,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const sampleData: any[][] = [];
     let sampleIdx = 1;
     const campusList = campusConfigs.length > 0 ? campusConfigs : [{ name: 'Hải Phòng', code: 'HP' }];
-    const levelList  = educationLevelConfigs.length > 0 ? educationLevelConfigs : [{ name: 'Cao đẳng', code: 'CD' }];
+    const levelList = educationLevelConfigs.length > 0 ? educationLevelConfigs : [{ name: 'Cao đẳng', code: 'CD' }];
 
     campusList.forEach((campus: any) => {
       levelList.forEach((level: any) => {
@@ -1715,7 +1715,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
     // Sheet hướng dẫn
     const campusValues = campusList.map((c: any) => c.name).join(', ');
-    const levelValues  = levelList.map((l: any) => l.name).join(', ');
+    const levelValues = levelList.map((l: any) => l.name).join(', ');
     const guide: any[][] = [
       ['TRƯỜNG DỮ LIỆU', 'YÊU CẦU', 'GIÁ TRỊ HỢP LỆ (phải khớp chính xác)'],
       ['Mã nghề', 'Bắt buộc – Duy nhất theo Cơ sở + Hệ', 'Chuỗi ký tự (vd: K7648020101)'],
@@ -1805,7 +1805,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         <div class="content-row">
           <span class="label">Báo cho thí sinh:</span>
           <span class="value" style="font-size: 14pt;">${submission.fullName}</span>
-          <span style="margin-left: auto;">Ngày sinh: <span class="value">${(() => { try { const d = new Date(submission.dob); if (isNaN(d.getTime())) return submission.dob || ''; return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); } catch { return submission.dob || ''; } })()}</span></span>
+          <span style="margin-left: auto;">Ngày sinh: <span class="value">${(() => { try { const d = new Date(submission.dob); if (isNaN(d.getTime())) return submission.dob || ''; return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); } catch { return submission.dob || ''; } })()}</span></span>
         </div>
         <div class="content-row">
           <span class="label">Địa chỉ thường trú:</span>
@@ -1928,7 +1928,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   };
 
   const isAdmin = user?.role === 'Quản trị viên';
-    const formatDateValue = (date: any) => {
+  const formatDateValue = (date: any) => {
     if (!date) return '';
     try {
       const d = new Date(date);
@@ -2319,79 +2319,79 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                       <tr><th className="px-6 py-4">Mã nghề</th><th className="px-6 py-4">Tên nghề đào tạo</th><th className="px-6 py-4">Cơ sở</th><th className="px-6 py-4">Hệ</th><th className="px-6 py-4 text-center">Học phí</th><th className="px-6 py-4 text-center">Thao tác</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                       {(() => {
-                         const searchLower = configSearchTerm.toLowerCase();
-                         const filtered = tuitionConfigs.filter(config =>
-                           config.name.toLowerCase().includes(searchLower) ||
-                           config.code.toLowerCase().includes(searchLower) ||
-                           config.campus.toLowerCase().includes(searchLower) ||
-                           config.educationLevel.toLowerCase().includes(searchLower)
-                         );
-                         const totalPages = Math.ceil(filtered.length / MAJORS_PER_PAGE);
-                         const safePage = Math.min(majorPage, Math.max(1, totalPages));
-                         const paginated = filtered.slice((safePage - 1) * MAJORS_PER_PAGE, safePage * MAJORS_PER_PAGE);
-                         if (filtered.length === 0) return (
-                           <tr><td colSpan={6} className="px-8 py-10 text-center text-gray-400 italic">Không tìm thấy kết quả phù hợp</td></tr>
-                         );
-                         return paginated.map(config => (
-                           <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
-                             <td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td>
-                             <td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td>
-                             <td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td>
-                             <td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td>
-                             <td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td>
-                             <td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td>
-                           </tr>
-                         ));
-                       })()}
-                     </tbody>
-                   </table>
-                   {(() => {
-                     const searchLower = configSearchTerm.toLowerCase();
-                     const filtered = tuitionConfigs.filter(config =>
-                       config.name.toLowerCase().includes(searchLower) ||
-                       config.code.toLowerCase().includes(searchLower) ||
-                       config.campus.toLowerCase().includes(searchLower) ||
-                       config.educationLevel.toLowerCase().includes(searchLower)
-                     );
-                     const totalPages = Math.ceil(filtered.length / MAJORS_PER_PAGE);
-                     if (totalPages <= 1) return null;
-                     const safePage = Math.min(majorPage, Math.max(1, totalPages));
-                     const startItem = (safePage - 1) * MAJORS_PER_PAGE + 1;
-                     const endItem = Math.min(safePage * MAJORS_PER_PAGE, filtered.length);
-                     return (
-                       <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
-                         <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                           Hiển thị {startItem}–{endItem} / {filtered.length} nghề
-                         </div>
-                         <div className="flex items-center gap-2">
-                           <button
-                             disabled={safePage <= 1}
-                             onClick={() => setMajorPage(p => Math.max(1, p - 1))}
-                             className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                           >
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
-                           </button>
-                           {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                             <button
-                               key={p}
-                               onClick={() => setMajorPage(p)}
-                               className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${p === safePage ? 'bg-blue-900 text-white border-blue-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:border-blue-200'}`}
-                             >
-                               {p}
-                             </button>
-                           ))}
-                           <button
-                             disabled={safePage >= totalPages}
-                             onClick={() => setMajorPage(p => Math.min(totalPages, p + 1))}
-                             className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                           >
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
-                           </button>
-                         </div>
-                       </div>
-                     );
-                   })()}
+                      {(() => {
+                        const searchLower = configSearchTerm.toLowerCase();
+                        const filtered = tuitionConfigs.filter(config =>
+                          config.name.toLowerCase().includes(searchLower) ||
+                          config.code.toLowerCase().includes(searchLower) ||
+                          config.campus.toLowerCase().includes(searchLower) ||
+                          config.educationLevel.toLowerCase().includes(searchLower)
+                        );
+                        const totalPages = Math.ceil(filtered.length / MAJORS_PER_PAGE);
+                        const safePage = Math.min(majorPage, Math.max(1, totalPages));
+                        const paginated = filtered.slice((safePage - 1) * MAJORS_PER_PAGE, safePage * MAJORS_PER_PAGE);
+                        if (filtered.length === 0) return (
+                          <tr><td colSpan={6} className="px-8 py-10 text-center text-gray-400 italic">Không tìm thấy kết quả phù hợp</td></tr>
+                        );
+                        return paginated.map(config => (
+                          <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td>
+                            <td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td>
+                            <td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td>
+                            <td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td>
+                            <td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td>
+                            <td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
+                  </table>
+                  {(() => {
+                    const searchLower = configSearchTerm.toLowerCase();
+                    const filtered = tuitionConfigs.filter(config =>
+                      config.name.toLowerCase().includes(searchLower) ||
+                      config.code.toLowerCase().includes(searchLower) ||
+                      config.campus.toLowerCase().includes(searchLower) ||
+                      config.educationLevel.toLowerCase().includes(searchLower)
+                    );
+                    const totalPages = Math.ceil(filtered.length / MAJORS_PER_PAGE);
+                    if (totalPages <= 1) return null;
+                    const safePage = Math.min(majorPage, Math.max(1, totalPages));
+                    const startItem = (safePage - 1) * MAJORS_PER_PAGE + 1;
+                    const endItem = Math.min(safePage * MAJORS_PER_PAGE, filtered.length);
+                    return (
+                      <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                          Hiển thị {startItem}–{endItem} / {filtered.length} nghề
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={safePage <= 1}
+                            onClick={() => setMajorPage(p => Math.max(1, p - 1))}
+                            className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                          </button>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                            <button
+                              key={p}
+                              onClick={() => setMajorPage(p)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${p === safePage ? 'bg-blue-900 text-white border-blue-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:border-blue-200'}`}
+                            >
+                              {p}
+                            </button>
+                          ))}
+                          <button
+                            disabled={safePage >= totalPages}
+                            onClick={() => setMajorPage(p => Math.min(totalPages, p + 1))}
+                            className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             ) : tuitionSubTab === 'health' ? (
