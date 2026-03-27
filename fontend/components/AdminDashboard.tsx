@@ -1768,7 +1768,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           .section-bold { font-weight: bold; margin: 3px 0 3px 0; font-size: 13pt; }
           .requirement-item { margin-bottom: 1px; padding-left: 0px; text-align: justify; font-weight: bold; line-height: 1.15; }
           .fees-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
-          .fees-table th, .fees-table td { border: 1px solid black; padding: 4px 8px; font-size: 12pt; }
+          .fees-table th, .fees-table td { border: 1px solid black; padding: 3px 6px; font-size: 10pt; }
           .fees-table th { text-align: center; font-weight: bold; }
           .center { text-align: center; }
           .right { text-align: right; }
@@ -1862,7 +1862,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const generateAdmissionNoticePdf = async (fragment: string): Promise<string> => {
     const opt = {
-      margin: [15, 0, 0, 0],
+      margin: 0,
       filename: 'Giay_bao_nhap_hoc.pdf',
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
