@@ -1827,33 +1827,33 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         <div class="section-bold">Khi đến trường nhập học, thí sinh cần mang theo:</div>
         ${template.requirements?.map((req: any, idx: number) => `<div class="requirement-item">${idx + 1}. ${req}</div>`).join('') || ''}
         <div class="section-bold">7. Các khoản thu:</div>
-        <table style="width:100%;border-collapse:collapse;margin:4mm 0 5px 0;table-layout:fixed;font-size:10pt;">
+        <table style="width:100%;border-collapse:collapse;margin:4mm 0 5px 0;font-size:10pt;line-height:1.4;">
           <thead>
             <tr>
-              <th style="width:8%;border:1px solid black;padding:3px 4px;text-align:center;font-weight:bold;background:#f0f0f0;overflow:hidden;">STT</th>
-              <th style="width:67%;border:1px solid black;padding:3px 4px;text-align:center;font-weight:bold;background:#f0f0f0;overflow:hidden;word-break:break-word;">Tên khoản nộp</th>
-              <th style="width:25%;border:1px solid black;padding:3px 4px;text-align:center;font-weight:bold;background:#f0f0f0;overflow:hidden;white-space:nowrap;">Cộng</th>
+              <th style="width:8%;border:1px solid black;padding:5px 6px;text-align:center;font-weight:bold;background:#f0f0f0;">STT</th>
+              <th style="width:67%;border:1px solid black;padding:5px 6px;text-align:center;font-weight:bold;background:#f0f0f0;word-break:break-word;">Tên khoản nộp</th>
+              <th style="width:25%;border:1px solid black;padding:5px 6px;text-align:center;font-weight:bold;background:#f0f0f0;white-space:nowrap;">Cộng</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td style="border:1px solid black;padding:3px 4px;text-align:center;overflow:hidden;">1</td>
-              <td style="border:1px solid black;padding:3px 4px;overflow:hidden;word-break:break-word;">Học phí học kỳ 1</td>
-              <td style="border:1px solid black;padding:3px 4px;text-align:right;overflow:hidden;white-space:nowrap;">${tAmt > 0 ? tAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:center;">1</td>
+              <td style="border:1px solid black;padding:5px 6px;word-break:break-word;">Học phí học kỳ 1</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:right;white-space:nowrap;">${tAmt > 0 ? tAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
             </tr>
             <tr>
-              <td style="border:1px solid black;padding:3px 4px;text-align:center;overflow:hidden;">2</td>
-              <td style="border:1px solid black;padding:3px 4px;overflow:hidden;word-break:break-word;">Phí bảo hiểm Y tế (1 năm)</td>
-              <td style="border:1px solid black;padding:3px 4px;text-align:right;overflow:hidden;white-space:nowrap;">${hAmt > 0 ? hAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:center;">2</td>
+              <td style="border:1px solid black;padding:5px 6px;word-break:break-word;">Phí bảo hiểm Y tế (1 năm)</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:right;white-space:nowrap;">${hAmt > 0 ? hAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
             </tr>
             <tr>
-              <td style="border:1px solid black;padding:3px 4px;text-align:center;overflow:hidden;">3</td>
-              <td style="border:1px solid black;padding:3px 4px;overflow:hidden;word-break:break-word;">Phí bảo hiểm Toàn diện (1 năm)</td>
-              <td style="border:1px solid black;padding:3px 4px;text-align:right;overflow:hidden;white-space:nowrap;">${cAmt > 0 ? cAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:center;">3</td>
+              <td style="border:1px solid black;padding:5px 6px;word-break:break-word;">Phí bảo hiểm Toàn diện (1 năm)</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:right;white-space:nowrap;">${cAmt > 0 ? cAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
             </tr>
             <tr>
-              <td colspan="2" style="border:1px solid black;padding:3px 4px;text-align:center;font-weight:bold;overflow:hidden;">TỔNG CỘNG:</td>
-              <td style="border:1px solid black;padding:3px 4px;text-align:right;font-weight:bold;overflow:hidden;white-space:nowrap;">${totalAmt > 0 ? totalAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+              <td colspan="2" style="border:1px solid black;padding:5px 6px;text-align:center;font-weight:bold;">TỔNG CỘNG:</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:right;font-weight:bold;white-space:nowrap;">${totalAmt > 0 ? totalAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
             </tr>
           </tbody>
         </table>
