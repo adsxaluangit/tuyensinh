@@ -193,8 +193,7 @@ export const fetchAllRegistrations = async (params: {
 };
 
 export const fetchAllApprovedRegistrations = async () => {
-    let url = `api/registrations?pagination[pageSize]=10000&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc`;
-    
+    const PAGE_SIZE = 1000; // an toàn dưới maxLimit=12000
     const fieldNames = [
         'fullName', 'dob', 'pob', 'gender', 'ethnicity', 'idNumber', 'issueDate', 'issuePlace',
         'phone', 'email', 'addressDetails', 'province', 'district',
@@ -206,10 +205,30 @@ export const fetchAllApprovedRegistrations = async () => {
         'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 
         'docSeq', 'paymentMethod', 'collectorAccount', 'collectedDate', 'createdAt'
     ];
-    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') + '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
+    const fieldStr = fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') +
+        '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
 
-    return await fetchAPI(url);
+    const baseUrl = `api/registrations?pagination[pageSize]=${PAGE_SIZE}&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc${fieldStr}`;
+
+    // Lấy trang đầu để biết tổng số hồ sơ trúng tuyển
+    const firstPage = await fetchAPI(baseUrl + `&pagination[page]=1`);
+    const allData = [...firstPage.data];
+    const total = firstPage.meta?.pagination?.total || 0;
+    const totalPages = Math.ceil(total / PAGE_SIZE);
+
+    // Lấy các trang còn lại song song
+    if (totalPages > 1) {
+        const promises = [];
+        for (let page = 2; page <= totalPages; page++) {
+            promises.push(fetchAPI(baseUrl + `&pagination[page]=${page}`));
+        }
+        const results = await Promise.all(promises);
+        results.forEach(r => allData.push(...r.data));
+    }
+
+    return { data: allData } as { data: any[] };
 };
+
 
 export const getRegistrationById = async (documentId: string) => {
     return await fetchAPI(`/api/registrations/${documentId}?populate=*`);

@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
@@ -473,7 +473,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     setIsTuitionLoading(true);
     try {
       const response = await api.fetchAllApprovedRegistrations();
-      const regData = response.data || response;
+      const regData: any[] = Array.isArray((response as any).data) ? (response as any).data : (Array.isArray(response) ? (response as any[]) : []);
       setTuitionSubmissions(regData.map((r: any) => ({
         ...r,
         id: r.idNumber,
