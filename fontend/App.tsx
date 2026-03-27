@@ -231,7 +231,7 @@ const App: React.FC = () => {
 
       // 2. Secure server-side login
       const response = await api.loginStaff(username, password);
-      
+
       if (response && response.data) {
         const foundUser = response.data;
         setCurrentUser({
@@ -346,28 +346,28 @@ const App: React.FC = () => {
                 <input type="text" required placeholder="Nhập họ và tên" className={inputClasses} value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
               </InputGroup>
               <InputGroup label="Ngày sinh" required>
-                <DateSelector 
-                required 
-                value={formData.dob} 
-                onChange={(val) => {
-                  if (val) {
-                    const birthDate = new Date(val);
-                    const today = new Date();
-                    let age = today.getFullYear() - birthDate.getFullYear();
-                    const m = today.getMonth() - birthDate.getMonth();
-                    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
-                      age--;
+                <DateSelector
+                  required
+                  value={formData.dob}
+                  onChange={(val) => {
+                    if (val) {
+                      const birthDate = new Date(val);
+                      const today = new Date();
+                      let age = today.getFullYear() - birthDate.getFullYear();
+                      const m = today.getMonth() - birthDate.getMonth();
+                      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
+                      }
+
+                      if (age < 15) {
+                        alert("Bạn không đủ tuổi để nhập học (Yêu cầu từ 15 tuổi trở lên)");
+                        setFormData({ ...formData, dob: '' });
+                        return;
+                      }
                     }
-                    
-                    if (age < 15) {
-                      alert("Bạn không đủ tuổi để nhập học (Yêu cầu từ 15 tuổi trở lên)");
-                      setFormData({ ...formData, dob: '' });
-                      return;
-                    }
-                  }
-                  setFormData({ ...formData, dob: val });
-                }} 
-              />
+                    setFormData({ ...formData, dob: val });
+                  }}
+                />
               </InputGroup>
               <InputGroup label="Nơi sinh" required>
                 <select className={selectClasses} required value={formData.pob} onChange={(e) => setFormData({ ...formData, pob: e.target.value })}>
@@ -387,21 +387,21 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <InputGroup label="Số CCCD/CMND" required>
-                <input 
-                  type="text" 
-                  pattern="\d{12}" 
-                  minLength={12} 
-                  maxLength={12} 
-                  title="Vui lòng nhập chính xác 12 chữ số" 
-                  required 
-                  placeholder="Số định danh 12 số" 
-                  className={inputClasses} 
-                  disabled={isEditing} 
-                  value={formData.idNumber} 
+                <input
+                  type="text"
+                  pattern="\d{12}"
+                  minLength={12}
+                  maxLength={12}
+                  title="Vui lòng nhập chính xác 12 chữ số"
+                  required
+                  placeholder="Số định danh 12 số"
+                  className={inputClasses}
+                  disabled={isEditing}
+                  value={formData.idNumber}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 12);
                     setFormData({ ...formData, idNumber: val });
-                  }} 
+                  }}
                 />
               </InputGroup>
               <InputGroup label="Dân tộc" required>

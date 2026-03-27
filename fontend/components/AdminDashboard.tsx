@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
@@ -306,6 +306,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [configSearchTerm, setConfigSearchTerm] = useState('');
+  const [majorPage, setMajorPage] = useState(1);
+  const MAJORS_PER_PAGE = 20;
   const [filterCampus, setFilterCampus] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
   const [filterMajor, setFilterMajor] = useState('');
@@ -2258,7 +2260,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                       placeholder="Tìm mã nghề, tên nghề, cơ sở..."
                       className="w-full bg-white border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm"
                       value={configSearchTerm}
-                      onChange={e => setConfigSearchTerm(e.target.value)}
+                      onChange={e => { setConfigSearchTerm(e.target.value); setMajorPage(1); }}
                     />
                     <svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -2278,36 +2280,79 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                       <tr><th className="px-6 py-4">Mã nghề</th><th className="px-6 py-4">Tên nghề đào tạo</th><th className="px-6 py-4">Cơ sở</th><th className="px-6 py-4">Hệ</th><th className="px-6 py-4 text-center">Học phí</th><th className="px-6 py-4 text-center">Thao tác</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {tuitionConfigs.filter(config => {
-                        const searchLower = configSearchTerm.toLowerCase();
-                        return config.name.toLowerCase().includes(searchLower) ||
-                          config.code.toLowerCase().includes(searchLower) ||
-                          config.campus.toLowerCase().includes(searchLower) ||
-                          config.educationLevel.toLowerCase().includes(searchLower);
-                      }).length === 0 ? (
-                        <tr><td colSpan={6} className="px-8 py-10 text-center text-gray-400 italic">Không tìm thấy kết quả phù hợp</td></tr>
-                      ) : (
-                        tuitionConfigs
-                          .filter(config => {
-                            const searchLower = configSearchTerm.toLowerCase();
-                            return config.name.toLowerCase().includes(searchLower) ||
-                              config.code.toLowerCase().includes(searchLower) ||
-                              config.campus.toLowerCase().includes(searchLower) ||
-                              config.educationLevel.toLowerCase().includes(searchLower);
-                          })
-                          .map(config => (
-                            <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
-                              <td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td>
-                              <td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td>
-                              <td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td>
-                              <td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td>
-                              <td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td>
-                              <td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td>
-                            </tr>
-                          ))
-                      )}
-                    </tbody>
-                  </table>
+                       {(() => {
+                         const searchLower = configSearchTerm.toLowerCase();
+                         const filtered = tuitionConfigs.filter(config =>
+                           config.name.toLowerCase().includes(searchLower) ||
+                           config.code.toLowerCase().includes(searchLower) ||
+                           config.campus.toLowerCase().includes(searchLower) ||
+                           config.educationLevel.toLowerCase().includes(searchLower)
+                         );
+                         const totalPages = Math.ceil(filtered.length / MAJORS_PER_PAGE);
+                         const safePage = Math.min(majorPage, Math.max(1, totalPages));
+                         const paginated = filtered.slice((safePage - 1) * MAJORS_PER_PAGE, safePage * MAJORS_PER_PAGE);
+                         if (filtered.length === 0) return (
+                           <tr><td colSpan={6} className="px-8 py-10 text-center text-gray-400 italic">Không tìm thấy kết quả phù hợp</td></tr>
+                         );
+                         return paginated.map(config => (
+                           <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
+                             <td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td>
+                             <td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td>
+                             <td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td>
+                             <td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td>
+                             <td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td>
+                             <td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td>
+                           </tr>
+                         ));
+                       })()}
+                     </tbody>
+                   </table>
+                   {(() => {
+                     const searchLower = configSearchTerm.toLowerCase();
+                     const filtered = tuitionConfigs.filter(config =>
+                       config.name.toLowerCase().includes(searchLower) ||
+                       config.code.toLowerCase().includes(searchLower) ||
+                       config.campus.toLowerCase().includes(searchLower) ||
+                       config.educationLevel.toLowerCase().includes(searchLower)
+                     );
+                     const totalPages = Math.ceil(filtered.length / MAJORS_PER_PAGE);
+                     if (totalPages <= 1) return null;
+                     const safePage = Math.min(majorPage, Math.max(1, totalPages));
+                     const startItem = (safePage - 1) * MAJORS_PER_PAGE + 1;
+                     const endItem = Math.min(safePage * MAJORS_PER_PAGE, filtered.length);
+                     return (
+                       <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                         <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                           Hiển thị {startItem}–{endItem} / {filtered.length} nghề
+                         </div>
+                         <div className="flex items-center gap-2">
+                           <button
+                             disabled={safePage <= 1}
+                             onClick={() => setMajorPage(p => Math.max(1, p - 1))}
+                             className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                           >
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                           </button>
+                           {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                             <button
+                               key={p}
+                               onClick={() => setMajorPage(p)}
+                               className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${p === safePage ? 'bg-blue-900 text-white border-blue-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:border-blue-200'}`}
+                             >
+                               {p}
+                             </button>
+                           ))}
+                           <button
+                             disabled={safePage >= totalPages}
+                             onClick={() => setMajorPage(p => Math.min(totalPages, p + 1))}
+                             className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                           >
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                           </button>
+                         </div>
+                       </div>
+                     );
+                   })()}
                 </div>
               </>
             ) : tuitionSubTab === 'health' ? (
@@ -2489,7 +2534,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 <div className="lg:col-span-2 space-y-10">
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
                     <h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">1. Thông tin cá nhân & Liên hệ</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Giới tính" value={selectedSubmission.gender} /><DetailItem label="Ngày sinh" value={selectedSubmission.dob ? new Date(selectedSubmission.dob) : '--'} /><DetailItem label="Nơi sinh" value={selectedSubmission.pob} /><DetailItem label="Dân tộc" value={selectedSubmission.ethnicity} /><DetailItem label="Ngày cấp CCCD" value={selectedSubmission.issueDate ? new Date(selectedSubmission.issueDate) : '--'} /><DetailItem label="Nơi cấp" value={selectedSubmission.issuePlace} colSpan={2} /><DetailItem label="Số điện thoại" value={selectedSubmission.phone} highlight /><DetailItem label="Email" value={selectedSubmission.email} colSpan={2} /><DetailItem label="Họ tên phụ huynh" value={selectedSubmission.parentName} /><DetailItem label="SĐT phụ huynh" value={selectedSubmission.parentPhone} /></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Giới tính" value={selectedSubmission.gender} /><DetailItem label="Ngày sinh" value={formatDateValue(selectedSubmission.dob) || '--'} /><DetailItem label="Nơi sinh" value={selectedSubmission.pob} /><DetailItem label="Dân tộc" value={selectedSubmission.ethnicity} /><DetailItem label="Ngày cấp CCCD" value={formatDateValue(selectedSubmission.issueDate) || '--'} /><DetailItem label="Nơi cấp" value={selectedSubmission.issuePlace} colSpan={2} /><DetailItem label="Số điện thoại" value={selectedSubmission.phone} highlight /><DetailItem label="Email" value={selectedSubmission.email} colSpan={2} /><DetailItem label="Họ tên phụ huynh" value={selectedSubmission.parentName} /><DetailItem label="SĐT phụ huynh" value={selectedSubmission.parentPhone} /></div>
                   </div>
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">2. Địa chỉ thường trú (VNeID)</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Tỉnh / Thành phố" value={selectedSubmission.province} /><DetailItem label="Quận / Huyện, Xã / Phường" value={selectedSubmission.district} /><DetailItem label="Số nhà, đường, xóm" value={selectedSubmission.addressDetails} /></div></div>
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">3. Thông tin gửi giấy báo kết quả</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Người nhận" value={selectedSubmission.recipient} /><DetailItem label="Địa chỉ nhận" value={selectedSubmission.deliveryAddress} />{selectedSubmission.deliveryAddress === AddressType.OTHER && <DetailItem label="Địa chỉ chi tiết" value={selectedSubmission.deliveryAddressDetails} colSpan={2} />}</div></div>
