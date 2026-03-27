@@ -91,12 +91,29 @@ export const deleteEducationLevel = async (documentId: string) => {
 };
 
 export const fetchOccupations = async (campusName?: string, levelName?: string) => {
-    let url = `/api/occupations?populate=*&pagination[pageSize]=1000&sort[0]=id:desc`;
-    if (campusName) url += `&filters[campus][name][$eq]=${campusName}`;
-    if (levelName) url += `&filters[educationLevel][name][$eq]=${levelName}`;
+    let baseUrl = `/api/occupations?populate=*&pagination[pageSize]=500&sort[0]=id:desc`;
+    if (campusName) baseUrl += `&filters[campus][name][$eq]=${campusName}`;
+    if (levelName) baseUrl += `&filters[educationLevel][name][$eq]=${levelName}`;
 
-    const data = await fetchAPI(url);
-    return data.data;
+    // Lấy trang đầu để biết tổng số
+    const firstPage = await fetchAPI(baseUrl + `&pagination[page]=1`);
+    const allData = [...firstPage.data];
+
+    const total = firstPage.meta?.pagination?.total || 0;
+    const pageSize = firstPage.meta?.pagination?.pageSize || 500;
+    const totalPages = Math.ceil(total / pageSize);
+
+    // Lấy các trang còn lại nếu có
+    if (totalPages > 1) {
+        const promises = [];
+        for (let page = 2; page <= totalPages; page++) {
+            promises.push(fetchAPI(baseUrl + `&pagination[page]=${page}`));
+        }
+        const results = await Promise.all(promises);
+        results.forEach(r => allData.push(...r.data));
+    }
+
+    return allData;
 };
 
 export const createOccupation = async (occupationData: any) => {
