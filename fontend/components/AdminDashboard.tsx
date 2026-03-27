@@ -1805,7 +1805,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         <div class="content-row">
           <span class="label">Báo cho thí sinh:</span>
           <span class="value" style="font-size: 14pt;">${submission.fullName}</span>
-          <span style="margin-left: auto;">Ngày sinh: <span class="value">${new Date(submission.dob)}</span></span>
+          <span style="margin-left: auto;">Ngày sinh: <span class="value">${(() => { try { const d = new Date(submission.dob); if (isNaN(d.getTime())) return submission.dob || ''; return String(d.getDate()).padStart(2,'0') + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + d.getFullYear(); } catch { return submission.dob || ''; } })()}</span></span>
         </div>
         <div class="content-row">
           <span class="label">Địa chỉ thường trú:</span>
