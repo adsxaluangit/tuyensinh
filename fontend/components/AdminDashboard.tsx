@@ -1746,7 +1746,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const totalAmt = tAmt + hAmt + cAmt;
 
     return `
-      <div class="admission-notice-container" style="font-family: Arial, sans-serif; color: #000; line-height: 1.15; font-size: 13pt; width: 210mm; min-height: 297mm; padding: 5mm 15mm 15mm 10mm; box-sizing: border-box; background: white;">
+      <div class="admission-notice-container" style="font-family: Arial, sans-serif; color: #000; line-height: 1.15; font-size: 13pt; width: 210mm; min-height: 297mm; padding: 15mm 15mm 15mm 10mm; box-sizing: border-box; background: white;">
         <style>
           .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
           .header-left { text-align: center; width: 48%; }
@@ -1862,7 +1862,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const generateAdmissionNoticePdf = async (fragment: string): Promise<string> => {
     const opt = {
-      margin: 0,
+      margin: [15, 0, 0, 0],
       filename: 'Giay_bao_nhap_hoc.pdf',
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
@@ -1887,7 +1887,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       <html>
         <head>
           <title>${template.title} - ${submission.fullName}</title>
-          <style>@page { size: A4; margin: 0; } body { margin: 0; padding: 0; }</style>
+          <style>@page { size: A4; margin: 15mm 0 0 0; } body { margin: 0; padding: 0; }</style>
         </head>
         <body>
           ${fragment}
