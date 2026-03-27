@@ -1827,7 +1827,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         <div class="section-bold">Khi đến trường nhập học, thí sinh cần mang theo:</div>
         ${template.requirements?.map((req: any, idx: number) => `<div class="requirement-item">${idx + 1}. ${req}</div>`).join('') || ''}
         <div class="section-bold">7. Các khoản thu:</div>
-        <table style="width:100%;border-collapse:collapse;margin:5px 0;table-layout:fixed;font-size:10pt;">
+        <table style="width:100%;border-collapse:collapse;margin:4mm 0 5px 0;table-layout:fixed;font-size:10pt;">
           <thead>
             <tr>
               <th style="width:8%;border:1px solid black;padding:3px 4px;text-align:center;font-weight:bold;background:#f0f0f0;overflow:hidden;">STT</th>
