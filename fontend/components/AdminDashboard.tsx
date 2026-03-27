@@ -1887,7 +1887,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       <html>
         <head>
           <title>${template.title} - ${submission.fullName}</title>
-          <style>@page { size: A4; margin: 15mm 0 0 0; } body { margin: 0; padding: 0; }</style>
+          <style>@page { size: A4; margin: 0; } body { margin: 0; padding: 0; }</style>
         </head>
         <body>
           ${fragment}
