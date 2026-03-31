@@ -30,6 +30,7 @@ const App: React.FC = () => {
   const [password, setPassword] = useState('');
   const [studentIdInput, setStudentIdInput] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [emailError, setEmailError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('tuyensinh_user');
@@ -431,16 +432,71 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <InputGroup label="Số điện thoại" required>
-                <input type="tel" required placeholder="Số điện thoại cá nhân" className={inputClasses} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                <input
+                  type="tel"
+                  required
+                  pattern="\d{10}"
+                  minLength={10}
+                  maxLength={10}
+                  title="Vui lòng nhập chính xác 10 chữ số"
+                  placeholder="Số điện thoại cá nhân"
+                  className={inputClasses}
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone: val });
+                  }}
+                />
               </InputGroup>
               <InputGroup label="Email" required>
-                <input type="email" required placeholder="Địa chỉ email liên hệ" className={inputClasses} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                <input
+                  type="email"
+                  required
+                  placeholder="Địa chỉ email liên hệ"
+                  className={`${inputClasses} ${emailError ? 'border-red-500 focus:ring-red-500/10' : ''}`}
+                  value={formData.email}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, email: val });
+                    if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                      setEmailError('Email không đúng định dạng (vd: example@gmail.com)');
+                    } else {
+                      setEmailError('');
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                      setEmailError('Email không đúng định dạng (vd: example@gmail.com)');
+                    } else {
+                      setEmailError('');
+                    }
+                  }}
+                />
+                {emailError && (
+                  <p className="text-red-500 text-[11px] font-bold mt-1 px-1 flex items-center gap-1">
+                    <span>⚠</span> {emailError}
+                  </p>
+                )}
               </InputGroup>
               <InputGroup label="Phụ huynh/Bảo trợ">
                 <input type="text" placeholder="Họ tên phụ huynh" className={inputClasses} value={formData.parentName} onChange={(e) => setFormData({ ...formData, parentName: e.target.value })} />
               </InputGroup>
               <InputGroup label="SĐT Phụ huynh">
-                <input type="tel" placeholder="Số điện thoại phụ huynh" className={inputClasses} value={formData.parentPhone} onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })} />
+                <input
+                  type="tel"
+                  pattern="\d{10}"
+                  minLength={10}
+                  maxLength={10}
+                  title="Vui lòng nhập chính xác 10 chữ số"
+                  placeholder="Số điện thoại phụ huynh"
+                  className={inputClasses}
+                  value={formData.parentPhone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, parentPhone: val });
+                  }}
+                />
               </InputGroup>
             </div>
           </FormSection>
