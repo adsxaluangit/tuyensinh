@@ -31,6 +31,8 @@ const App: React.FC = () => {
   const [studentIdInput, setStudentIdInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [parentPhoneError, setParentPhoneError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('tuyensinh_user');
@@ -440,13 +442,31 @@ const App: React.FC = () => {
                   maxLength={10}
                   title="Vui lòng nhập chính xác 10 chữ số"
                   placeholder="Số điện thoại cá nhân"
-                  className={inputClasses}
+                  className={`${inputClasses} ${phoneError ? 'border-red-500 focus:ring-red-500/10' : ''}`}
                   value={formData.phone}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                     setFormData({ ...formData, phone: val });
+                    if (val && val.length < 10) {
+                      setPhoneError('Vui lòng nhập đủ 10 chữ số');
+                    } else {
+                      setPhoneError('');
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && val.length < 10) {
+                      setPhoneError('Vui lòng nhập đủ 10 chữ số');
+                    } else {
+                      setPhoneError('');
+                    }
                   }}
                 />
+                {phoneError && (
+                  <p className="text-red-500 text-[11px] font-bold mt-1 px-1 flex items-center gap-1">
+                    <span>⚠</span> {phoneError}
+                  </p>
+                )}
               </InputGroup>
               <InputGroup label="Email" required>
                 <input
@@ -490,13 +510,31 @@ const App: React.FC = () => {
                   maxLength={10}
                   title="Vui lòng nhập chính xác 10 chữ số"
                   placeholder="Số điện thoại phụ huynh"
-                  className={inputClasses}
+                  className={`${inputClasses} ${parentPhoneError ? 'border-red-500 focus:ring-red-500/10' : ''}`}
                   value={formData.parentPhone}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                     setFormData({ ...formData, parentPhone: val });
+                    if (val && val.length < 10) {
+                      setParentPhoneError('Vui lòng nhập đủ 10 chữ số');
+                    } else {
+                      setParentPhoneError('');
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && val.length < 10) {
+                      setParentPhoneError('Vui lòng nhập đủ 10 chữ số');
+                    } else {
+                      setParentPhoneError('');
+                    }
                   }}
                 />
+                {parentPhoneError && (
+                  <p className="text-red-500 text-[11px] font-bold mt-1 px-1 flex items-center gap-1">
+                    <span>⚠</span> {parentPhoneError}
+                  </p>
+                )}
               </InputGroup>
             </div>
           </FormSection>
