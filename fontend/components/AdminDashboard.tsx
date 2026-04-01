@@ -1163,7 +1163,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const handleExportTuitionExcel = () => {
     if (submissions.length === 0) return alert('Không có dữ liệu!');
-    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Nghề đào tạo', 'Mã nghề', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc người thu tiền', 'Ngày nộp', 'Ngày thu chi tiết'];
+    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Cơ sở đăng ký', 'Nghề đào tạo', 'Mã nghề', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc người thu tiền', 'Ngày nộp', 'Ngày thu chi tiết'];
     const rows = approvedSubmissions.map((s, idx) => {
       const hAmount = s.isHealthSelected ? (s.healthAmount || 0) : 0;
       const cAmount = s.isComprehensiveSelected ? (s.comprehensiveAmount || 0) : 0;
@@ -1184,6 +1184,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         s.addressDetails,
         s.district,
         s.province,
+        s.campus || '',
         s.choice1Major || '',
         s.choice1Specialty || '',
         (s.tuitionAmount || 0),
