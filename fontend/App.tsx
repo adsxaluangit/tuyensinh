@@ -577,9 +577,9 @@ const App: React.FC = () => {
           {/* Phần này đồng bộ dữ liệu Cơ sở và Hệ từ Cấu hình hệ thống */}
           <FormSection title="THÔNG TIN ĐĂNG KÝ TRƯỜNG CAO HÀNG HẢI VÀ ĐƯỜNG THỦY I">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputGroup label="Cơ sở nhập học" required>
+              <InputGroup label="Địa điểm nhập học" required>
                 <select className={selectClasses} required value={formData.campus} onChange={(e) => setFormData({ ...formData, campus: e.target.value, choice1Major: '', choice1Specialty: '' })}>
-                  <option value="">-- Chọn cơ sở --</option>
+                  <option value="">-- Chọn địa điểm --</option>
                   {availableCampuses.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </InputGroup>

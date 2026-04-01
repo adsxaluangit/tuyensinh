@@ -159,7 +159,7 @@ export default {
                 <p style="margin: 5px 0;"><strong>Mã hồ sơ:</strong> ${registration.idNumber}</p>
                 <p style="margin: 5px 0;"><strong>Ngành học:</strong> ${major}</p>
                 <p style="margin: 5px 0;"><strong>Hệ đào tạo:</strong> ${eduLevel}</p>
-                <p style="margin: 5px 0;"><strong>Cơ sở nhập học:</strong> ${campusName}</p>
+                <p style="margin: 5px 0;"><strong>Địa điểm nhập học:</strong> ${campusName}</p>
                 <p style="margin: 5px 0;"><strong>Mật khẩu tra cứu/chỉnh sửa:</strong> <span style="color: #dc2626; font-weight: bold;">${registration.password || 'N/A'}</span></p>
               </div>
 
