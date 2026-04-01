@@ -33,6 +33,7 @@ const App: React.FC = () => {
   const [emailError, setEmailError] = useState('');
   const [phoneError, setPhoneError] = useState('');
   const [parentPhoneError, setParentPhoneError] = useState('');
+  const [issueDateError, setIssueDateError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('tuyensinh_user');
@@ -154,6 +155,12 @@ const App: React.FC = () => {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (phoneError || parentPhoneError || emailError || issueDateError) {
+      alert('Vui lòng kiểm tra lại và sửa các lỗi nhập liệu (chữ đỏ) trước khi nộp hồ sơ.');
+      return;
+    }
+
     const selectedOcc = masterOccupations.find(occ => occ.name === formData.choice1Major && occ.code === formData.choice1Specialty);
 
     // Lấy thông tin cấu hình từ Strapi (mặc định lấy bản ghi đầu tiên)
@@ -410,7 +417,35 @@ const App: React.FC = () => {
                 <input type="text" required placeholder="Dân tộc" className={inputClasses} value={formData.ethnicity} onChange={(e) => setFormData({ ...formData, ethnicity: e.target.value })} />
               </InputGroup>
               <InputGroup label="Ngày cấp" required>
-                <DateSelector required value={formData.issueDate} onChange={(val) => setFormData({ ...formData, issueDate: val })} />
+                <div className="flex flex-col gap-1 w-full">
+                  <div className={`transition-all ${issueDateError ? 'rounded-[0.9rem] ring-2 ring-red-500/30 ring-offset-1 p-[1px]' : ''}`}>
+                    <DateSelector 
+                      required 
+                      value={formData.issueDate} 
+                      onChange={(val) => {
+                        if (val) {
+                          const issueDate = new Date(val);
+                          const today = new Date();
+                          issueDate.setHours(0,0,0,0);
+                          today.setHours(0,0,0,0);
+                          if (issueDate.getTime() > today.getTime()) {
+                            setIssueDateError('Ngày cấp không được vượt quá ngày hiện tại');
+                          } else {
+                            setIssueDateError('');
+                          }
+                        } else {
+                          setIssueDateError('');
+                        }
+                        setFormData({ ...formData, issueDate: val });
+                      }} 
+                    />
+                  </div>
+                  {issueDateError && (
+                    <p className="text-red-500 text-[10px] font-bold mt-1 px-1 flex items-center gap-1">
+                      <span>⚠</span> {issueDateError}
+                    </p>
+                  )}
+                </div>
               </InputGroup>
               <InputGroup label="Nơi cấp" required>
                 <input type="text" required className={inputClasses} value={formData.issuePlace} onChange={(e) => setFormData({ ...formData, issuePlace: e.target.value })} />
