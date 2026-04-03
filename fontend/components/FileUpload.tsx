@@ -17,10 +17,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ label, required, placeholderIma
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       
-      // Limit file size to 2MB
-      const maxSize = 2 * 1024 * 1024;
+      // Limit file size to 5MB
+      const maxSize = 5 * 1024 * 1024;
       if (file.size > maxSize) {
-        alert('Dung lượng ảnh quá lớn! Vui lòng chọn ảnh dưới 2MB.');
+        alert('Dung lượng ảnh quá lớn! Vui lòng chọn ảnh dưới 5MB.');
         e.target.value = ''; // Reset input
         return;
       }

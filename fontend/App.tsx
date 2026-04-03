@@ -419,15 +419,15 @@ const App: React.FC = () => {
               <InputGroup label="Ngày cấp" required>
                 <div className="flex flex-col gap-1 w-full">
                   <div className={`transition-all ${issueDateError ? 'rounded-[0.9rem] ring-2 ring-red-500/30 ring-offset-1 p-[1px]' : ''}`}>
-                    <DateSelector 
-                      required 
-                      value={formData.issueDate} 
+                    <DateSelector
+                      required
+                      value={formData.issueDate}
                       onChange={(val) => {
                         if (val) {
                           const issueDate = new Date(val);
                           const today = new Date();
-                          issueDate.setHours(0,0,0,0);
-                          today.setHours(0,0,0,0);
+                          issueDate.setHours(0, 0, 0, 0);
+                          today.setHours(0, 0, 0, 0);
                           if (issueDate.getTime() > today.getTime()) {
                             setIssueDateError('Ngày cấp không được vượt quá ngày hiện tại');
                           } else {
@@ -437,7 +437,7 @@ const App: React.FC = () => {
                           setIssueDateError('');
                         }
                         setFormData({ ...formData, issueDate: val });
-                      }} 
+                      }}
                     />
                   </div>
                   {issueDateError && (
