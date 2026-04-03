@@ -663,7 +663,13 @@ const App: React.FC = () => {
                 {SUBJECTS.map((sub) => (
                   <div key={sub} className="flex flex-col gap-2">
                     <label className="text-[10px] font-bold text-gray-500 text-center uppercase">{sub} <span className="text-red-500">*</span></label>
-                    <input type="text" required placeholder="-" className="w-full bg-blue-50/20 border-2 border-blue-500/10 rounded-xl px-2 py-2 text-sm text-center font-bold text-blue-900 focus:border-blue-500 outline-none transition-all shadow-sm" value={grades[sub]} onChange={(e) => setGrades({ ...grades, [sub]: e.target.value })} />
+                    <input type="text" required placeholder="-" className="w-full bg-blue-50/20 border-2 border-blue-500/10 rounded-xl px-2 py-2 text-sm text-center font-bold text-blue-900 focus:border-blue-500 outline-none transition-all shadow-sm" value={grades[sub]} onChange={(e) => {
+                      let val = e.target.value.replace(/[^0-9.]/g, '');
+                      const parts = val.split('.');
+                      if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                      if (val !== '' && parseFloat(val) > 10) val = '10';
+                      setGrades({ ...grades, [sub]: val });
+                    }} />
                   </div>
                 ))}
               </div>
