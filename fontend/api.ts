@@ -41,7 +41,7 @@ const fetchAPI = async (path: string, options?: RequestInit) => {
 };
 
 export const fetchCampuses = async () => {
-    const data = await fetchAPI('/api/campuses');
+    const data = await fetchAPI('/api/campuses?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -66,7 +66,7 @@ export const deleteCampus = async (documentId: string) => {
 };
 
 export const fetchEducationLevels = async () => {
-    const data = await fetchAPI('/api/education-levels');
+    const data = await fetchAPI('/api/education-levels?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -91,12 +91,29 @@ export const deleteEducationLevel = async (documentId: string) => {
 };
 
 export const fetchOccupations = async (campusName?: string, levelName?: string) => {
-    let url = `/api/occupations?populate=*&pagination[pageSize]=1000&sort[0]=id:desc`;
-    if (campusName) url += `&filters[campus][name][$eq]=${campusName}`;
-    if (levelName) url += `&filters[educationLevel][name][$eq]=${levelName}`;
+    let baseUrl = `/api/occupations?populate=*&pagination[pageSize]=500&sort[0]=id:desc`;
+    if (campusName) baseUrl += `&filters[campus][name][$eq]=${campusName}`;
+    if (levelName) baseUrl += `&filters[educationLevel][name][$eq]=${levelName}`;
 
-    const data = await fetchAPI(url);
-    return data.data;
+    // Lấy trang đầu để biết tổng số
+    const firstPage = await fetchAPI(baseUrl + `&pagination[page]=1`);
+    const allData = [...firstPage.data];
+
+    const total = firstPage.meta?.pagination?.total || 0;
+    const pageSize = firstPage.meta?.pagination?.pageSize || 500;
+    const totalPages = Math.ceil(total / pageSize);
+
+    // Lấy các trang còn lại nếu có
+    if (totalPages > 1) {
+        const promises = [];
+        for (let page = 2; page <= totalPages; page++) {
+            promises.push(fetchAPI(baseUrl + `&pagination[page]=${page}`));
+        }
+        const results = await Promise.all(promises);
+        results.forEach(r => allData.push(...r.data));
+    }
+
+    return allData;
 };
 
 export const createOccupation = async (occupationData: any) => {
@@ -157,7 +174,7 @@ export const fetchAllRegistrations = async (params: {
         'phone', 'email', 'addressDetails', 'province', 'district',
         'parentName', 'parentPhone', 
         'choice1Major', 'choice1Specialty', 'choice2Major', 'choice2Specialty',
-        'gradSchool', 'gradYear', 'diplomaNumber',
+        'gradSchool', 'gradYear', 'diplomaNumber', 'grades',
         'recipient', 'deliveryAddress', 'deliveryAddressDetails',
         'status', 'tuitionStatus', 'tuitionAmount', 'healthAmount', 'comprehensiveAmount', 'uniformAmount', 
         'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 
@@ -175,9 +192,12 @@ export const fetchAllRegistrations = async (params: {
     return await fetchAPI(url);
 };
 
-export const fetchAllApprovedRegistrations = async () => {
-    let url = `api/registrations?pagination[pageSize]=10000&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc`;
-    
+export const fetchAllApprovedRegistrations = async (params: { 
+    page?: number, 
+    pageSize?: number, 
+    searchTerm?: string 
+} = {}) => {
+    const { page = 1, pageSize = 25, searchTerm } = params;
     const fieldNames = [
         'fullName', 'dob', 'pob', 'gender', 'ethnicity', 'idNumber', 'issueDate', 'issuePlace',
         'phone', 'email', 'addressDetails', 'province', 'district',
@@ -189,10 +209,18 @@ export const fetchAllApprovedRegistrations = async () => {
         'tuitionPaidAmount', 'isHealthSelected', 'isComprehensiveSelected', 'isUniformSelected', 
         'docSeq', 'paymentMethod', 'collectorAccount', 'collectedDate', 'createdAt'
     ];
-    url += fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') + '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
+    const fieldStr = fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') +
+        '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
 
-    return await fetchAPI(url);
+    let baseUrl = `api/registrations?pagination[page]=${page}&pagination[pageSize]=${pageSize}&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc${fieldStr}`;
+
+    if (searchTerm) {
+        baseUrl += `&filters[$or][0][fullName][$contains]=${searchTerm}&filters[$or][1][phone][$contains]=${searchTerm}&filters[$or][2][idNumber][$contains]=${searchTerm}`;
+    }
+
+    return await fetchAPI(baseUrl);
 };
+
 
 export const getRegistrationById = async (documentId: string) => {
     return await fetchAPI(`/api/registrations/${documentId}?populate=*`);
@@ -206,7 +234,7 @@ export const deleteRegistration = async (documentId: string) => {
 
 // Health Insurance
 export const fetchHealthInsurances = async () => {
-    const data = await fetchAPI('/api/health-insurances');
+    const data = await fetchAPI('/api/health-insurances?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -232,7 +260,7 @@ export const deleteHealthInsurance = async (documentId: string) => {
 
 // Comprehensive Insurance
 export const fetchComprehensiveInsurances = async () => {
-    const data = await fetchAPI('/api/comprehensive-insurances');
+    const data = await fetchAPI('/api/comprehensive-insurances?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -258,7 +286,7 @@ export const deleteComprehensiveInsurance = async (documentId: string) => {
 
 // Uniform
 export const fetchUniforms = async () => {
-    const data = await fetchAPI('/api/uniforms');
+    const data = await fetchAPI('/api/uniforms?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -283,8 +311,15 @@ export const deleteUniform = async (documentId: string) => {
 };
 
 // Staff
+export const loginStaff = async (username: string, password: string) => {
+    return await fetchAPI('/api/staffs/login', {
+        method: 'POST',
+        body: JSON.stringify({ username, password }),
+    });
+};
+
 export const fetchStaffs = async () => {
-    const data = await fetchAPI('/api/staffs');
+    const data = await fetchAPI('/api/staffs?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -310,7 +345,7 @@ export const deleteStaff = async (documentId: string) => {
 
 // Admission Template
 export const fetchAdmissionTemplates = async () => {
-    const data = await fetchAPI('/api/admission-templates');
+    const data = await fetchAPI('/api/admission-templates?pagination[pageSize]=1000');
     return data.data;
 };
 
@@ -330,7 +365,7 @@ export const updateAdmissionTemplate = async (documentId: string, data: any) => 
 
 // System Settings
 export const fetchSystemSettings = async () => {
-    const data = await fetchAPI('/api/system-settings');
+    const data = await fetchAPI('/api/system-settings?pagination[pageSize]=1000');
     return data.data;
 };
 

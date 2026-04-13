@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
+import html2pdf from 'html2pdf.js';
 import { FormData, RecipientType, AddressType, SubmissionStatus, User, TuitionStatus } from '../types';
 import { CAMPUSES, MAJORS, SPECIALTIES, EDUCATION_LEVELS, PROVINCES } from '../constants';
 import * as api from '../api';
@@ -212,6 +213,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     user?.role === 'Kế toán' ? 'tuition' : 'submissions'
   );
   const [tuitionPagination, setTuitionPagination] = useState({ page: 1, pageSize: 25 });
+  const [tuitionTotalCount, setTuitionTotalCount] = useState(0);
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
   const [admissionSubTab, setAdmissionSubTab] = useState<'Hải Phòng' | 'Nam Đồng' | 'Đinh Nhu' | 'Thu học phí'>('Hải Phòng');
   const [isLoading, setIsLoading] = useState(false);
@@ -304,6 +306,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   });
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [configSearchTerm, setConfigSearchTerm] = useState('');
+  const [majorPage, setMajorPage] = useState(1);
+  const MAJORS_PER_PAGE = 20;
   const [filterCampus, setFilterCampus] = useState('');
   const [filterLevel, setFilterLevel] = useState('');
   const [filterMajor, setFilterMajor] = useState('');
@@ -341,7 +346,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       alert('Bạn không có quyền truy cập chức năng này!');
       return;
     }
-    if (user?.role === 'Kế toán' && tab !== 'tuition') {
+    if (user?.role === 'Kế toán' && tab !== 'tuition' && tab !== 'submissions') {
       alert('Bạn không có quyền truy cập chức năng này!');
       return;
     }
@@ -383,6 +388,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const campusData = await api.fetchCampuses();
       setCampusConfigs(campusData.map((c: any) => ({
         id: c.documentId || c.id,
+        numericId: c.id,
         name: c.name || c.attributes?.name,
         code: c.code || c.attributes?.code,
         address: c.address || c.attributes?.address
@@ -391,6 +397,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const elData = await api.fetchEducationLevels();
       setEducationLevelConfigs(elData.map((l: any) => ({
         id: l.documentId || l.id,
+        numericId: l.id,
         name: l.name || l.attributes?.name,
         code: l.code || l.attributes?.code,
         description: l.description || l.attributes?.description
@@ -399,16 +406,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const occData = await api.fetchOccupations();
       setTuitionConfigs(occData.map((o: any) => {
         const item = o.attributes || o;
-        const campusObj = item.campus?.data?.attributes || item.campus?.attributes || item.campus;
-        const levelObj = item.educationLevel?.data?.attributes || item.educationLevel?.attributes || item.educationLevel;
+
+        // Strapi 5 nested relation handle
+        const campusData = item.campus?.data?.attributes || item.campus?.data || item.campus?.attributes || item.campus;
+        const levelData = item.educationLevel?.data?.attributes || item.educationLevel?.data || item.educationLevel?.attributes || item.educationLevel;
 
         return {
           id: o.documentId || o.id,
           code: item.code,
           name: item.name,
-          amount: (item.amount !== undefined && item.amount !== null) ? item.amount : (item.attributes?.amount || 0),
-          campus: campusObj?.name || campusObj,
-          educationLevel: levelObj?.name || levelObj
+          amount: (item.amount !== undefined && item.amount !== null) ? item.amount : 0,
+          campus: campusData?.name || campusData,
+          educationLevel: levelData?.name || levelData
         };
       }));
 
@@ -438,10 +447,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
       const templateData = await api.fetchAdmissionTemplates();
       if (templateData && templateData.length > 0) {
-        setAdmissionTemplates(templateData.map((t: any) => ({
-          ...t,
-          id: t.documentId || t.id
-        })));
+        const templateRecord: Record<string, AdmissionTemplate> = {};
+        templateData.forEach((t: any) => {
+          const item = t.attributes || t;
+          templateRecord[item.campus] = {
+            ...item,
+            id: t.documentId || t.id
+          };
+        });
+        setAdmissionTemplates(prev => ({ ...prev, ...templateRecord }));
       }
 
       const settings = await api.fetchSystemSettings();
@@ -459,8 +473,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const fetchTuitionData = async () => {
     setIsTuitionLoading(true);
     try {
-      const response = await api.fetchAllApprovedRegistrations();
-      const regData = response.data || response;
+      const response: any = await api.fetchAllApprovedRegistrations({
+        page: tuitionPagination.page,
+        pageSize: tuitionPagination.pageSize,
+        searchTerm
+      });
+      const regData: any[] = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
       setTuitionSubmissions(regData.map((r: any) => ({
         ...r,
         id: r.idNumber,
@@ -468,6 +486,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         campus: r.campus?.name || r.campus,
         educationLevel: r.educationLevel?.name || r.educationLevel
       })));
+      if (response.meta && response.meta.pagination) {
+        setTuitionTotalCount(response.meta.pagination.total);
+      }
     } catch (error) {
       console.error("Lỗi khi tải danh sách học phí:", error);
     } finally {
@@ -479,7 +500,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     if (activeTab === 'tuition') {
       fetchTuitionData();
     }
-  }, [activeTab]);
+  }, [activeTab, tuitionPagination.page, tuitionPagination.pageSize, searchTerm]);
 
   const handleViewDetail = async (submission: any) => {
     try {
@@ -681,8 +702,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       code: fd.get('code') as string,
       name: fd.get('name') as string,
       amount: parseInt(fd.get('amount') as string) || 0,
-      campus: campus?.id,
-      educationLevel: level?.id
+      campus: (campus as any)?.numericId || campus?.id,
+      educationLevel: (level as any)?.numericId || level?.id
     };
 
     try {
@@ -707,6 +728,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       } catch (error) {
         console.error("Error deleting tuition:", error);
         alert(error instanceof Error ? error.message : "Lỗi khi xóa cấu hình");
+      }
+    }
+  };
+
+  const handleClearAllOccupations = async () => {
+    if (window.confirm("CẢNH BÁO: Hành động này sẽ xóa TOÀN BỘ danh mục ngành nghề/học phí trong hệ thống. Bạn có chắc chắn muốn tiếp tục?")) {
+      try {
+        setIsLoading(true);
+        // We'll need a new API method or call multiple deletes. 
+        // For now, let's delete existing ones from the state.
+        for (const occ of tuitionConfigs) {
+          await api.deleteOccupation(occ.id);
+        }
+        alert("Đã xóa sạch danh mục ngành nghề.");
+        fetchData();
+      } catch (error) {
+        console.error("Error clearing occupations:", error);
+        alert("Có lỗi xảy ra khi xóa dữ liệu.");
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -961,7 +1002,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         isHealthSelected: true,
         isComprehensiveSelected: true,
         isUniformSelected: true,
-        files: { frontId: null, backId: null, diploma: null, tempCert: null }
+        files: { frontId: null, backId: null, electronicId: null, diploma: null, tempCert: null }
       });
 
       // Avoid UI Freeze by breaking the task every 500 iterations
@@ -984,7 +1025,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const filteredSubmissions = React.useMemo(() => {
     return submissions
       .filter(s => {
-        if (user?.role !== 'Quản trị viên') {
+        if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {
           if (!user?.campus || s.campus !== user.campus) return false;
         }
         const searchLower = searchTerm.toLowerCase();
@@ -1004,24 +1045,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   }, [submissions, searchTerm, filterCampus, filterLevel, filterMajor, user?.role, user?.campus]);
 
   const approvedSubmissions = React.useMemo(() => {
-    const searchLower = searchTerm.toLowerCase();
-    return tuitionSubmissions
-      .filter(s => {
-        if (user?.role !== 'Quản trị viên') {
-          if (!user?.campus || s.campus !== user.campus) return false;
-        }
-        return s.fullName.toLowerCase().includes(searchLower) ||
-          s.phone.includes(searchTerm) ||
-          s.idNumber.includes(searchTerm);
-      })
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  }, [tuitionSubmissions, searchTerm, user?.role, user?.campus]);
+    return tuitionSubmissions.filter(s => {
+      if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {
+        if (!user?.campus || s.campus !== user.campus) return false;
+      }
+      return true;
+    });
+  }, [tuitionSubmissions, user?.role, user?.campus]);
 
   const paginatedTuitionSubmissions = React.useMemo(() => {
-    const startIndex = (tuitionPagination.page - 1) * tuitionPagination.pageSize;
-    const endIndex = startIndex + tuitionPagination.pageSize;
-    return approvedSubmissions.slice(startIndex, endIndex);
-  }, [approvedSubmissions, tuitionPagination.page, tuitionPagination.pageSize]);
+    return approvedSubmissions;
+  }, [approvedSubmissions]);
 
   // Reset tuition pagination to page 1 when search term changes
   useEffect(() => {
@@ -1048,7 +1082,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         campus: r.campus?.name || r.campus,
         educationLevel: r.educationLevel?.name || r.educationLevel
       })).filter((s: any) => {
-        if (user?.role !== 'Quản trị viên') {
+        if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {
           if (!user?.campus || s.campus !== user.campus) return false;
         }
         return true;
@@ -1065,41 +1099,51 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         'Nguyện vọng 1', 'Mã nghề NV1',
         'Nguyện vọng 2', 'Mã nghề NV2',
         'Trường THPT/TC/CĐ', 'Năm tốt nghiệp', 'Xếp loại tốt nghiệp',
-        'Người nhận giấy báo', 'Địa chỉ nhận giấy báo', 'Chi tiết nới nhận'
+        'Người nhận giấy báo', 'Địa chỉ nhận giấy báo', 'Chi tiết nới nhận',
+        ...SUBJECTS.map(s => `Điểm ${s}`),
+        'Điểm trung bình'
       ];
 
-      const rows = allData.map((s: any, idx: number) => [
-        idx + 1,
-        s.submissionDate ? new Date(s.submissionDate).toLocaleDateString('vi-VN') : '',
-        s.status,
-        s.fullName,
-        s.gender,
-        s.dob ? new Date(s.dob).toLocaleDateString('vi-VN') : '',
-        s.pob,
-        s.ethnicity,
-        `'${s.idNumber}`,
-        s.issueDate ? new Date(s.issueDate).toLocaleDateString('vi-VN') : '',
-        s.issuePlace,
-        `'${s.phone}`,
-        s.email,
-        s.addressDetails,
-        s.district,
-        s.province,
-        s.parentName,
-        `'${s.parentPhone}`,
-        s.campus,
-        s.educationLevel,
-        s.choice1Major,
-        s.choice1Specialty,
-        s.choice2Major || '',
-        s.choice2Specialty || '',
-        s.gradSchool,
-        s.gradYear,
-        s.diplomaNumber,
-        s.recipient,
-        s.deliveryAddress,
-        s.deliveryAddressDetails
-      ]);
+      const rows = allData.map((s: any, idx: number) => {
+        const grades = s.grades || {};
+        const sum = SUBJECTS.reduce((acc, sub) => acc + (parseFloat(grades[sub]) || 0), 0);
+        const avg = (sum / SUBJECTS.length).toFixed(2);
+
+        return [
+          idx + 1,
+          formatDateValue(s.submissionDate),
+          s.status,
+          s.fullName,
+          s.gender,
+          formatDateValue(s.dob),
+          s.pob,
+          s.ethnicity,
+          `'${s.idNumber}`,
+          formatDateValue(s.issueDate),
+          s.issuePlace,
+          `'${s.phone}`,
+          s.email,
+          s.addressDetails,
+          s.district,
+          s.province,
+          s.parentName,
+          `'${s.parentPhone}`,
+          s.campus,
+          s.educationLevel,
+          s.choice1Major,
+          s.choice1Specialty,
+          s.choice2Major || '',
+          s.choice2Specialty || '',
+          s.gradSchool,
+          s.gradYear,
+          s.diplomaNumber,
+          s.recipient,
+          s.deliveryAddress,
+          s.deliveryAddressDetails,
+          ...SUBJECTS.map(sub => grades[sub] || '0'),
+          avg
+        ];
+      });
 
       const ws = XLSX.utils.aoa_to_sheet([
         [`TỔNG SỐ HỒ SƠ TỔNG HỢP TRÊN HỆ THỐNG: ${allData.length}`],
@@ -1120,7 +1164,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const handleExportTuitionExcel = () => {
     if (submissions.length === 0) return alert('Không có dữ liệu!');
-    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Nghề đào tạo', 'Mã nghề', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc người thu tiền', 'Ngày nộp', 'Ngày thu chi tiết'];
+    const headers = ['STT', 'Mã số (CCCD)', 'Họ và tên', 'Ngày sinh', 'Nơi sinh', 'Dân tộc', 'SĐT', 'Số nhà, đường, ngõ, xóm', 'Xã/Phường/Thị trấn', 'Tỉnh/thành phố', 'Cơ sở đăng ký', 'Nghề đào tạo', 'Mã nghề', 'Học phí', 'BH Y Tế', 'BH Toàn Diện', 'Đồng Phục', 'Đã nộp', 'Còn lại', 'Tình trạng', 'Ghi chú', 'Acc người thu tiền', 'Ngày nộp', 'Ngày thu chi tiết'];
     const rows = approvedSubmissions.map((s, idx) => {
       const hAmount = s.isHealthSelected ? (s.healthAmount || 0) : 0;
       const cAmount = s.isComprehensiveSelected ? (s.comprehensiveAmount || 0) : 0;
@@ -1141,6 +1185,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         s.addressDetails,
         s.district,
         s.province,
+        s.campus || '',
         s.choice1Major || '',
         s.choice1Specialty || '',
         (s.tuitionAmount || 0),
@@ -1226,6 +1271,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     }
   };
 
+  const handleDeleteSingle = async (docId: string) => {
+    if (window.confirm("Bạn có chắc chắn muốn xóa hồ sơ này? Thao tác này không thể hoàn tác.")) {
+      try {
+        await api.deleteRegistration(docId);
+        alert("Đã xóa hồ sơ thành công.");
+        fetchData();
+      } catch (error) {
+        console.error("Error deleting registration:", error);
+        alert("Có lỗi xảy ra khi xóa hồ sơ.");
+      }
+    }
+  };
+
   const updateCurrentSubmissionStatus = async (status: SubmissionStatus) => {
     if (!selectedSubmission?.docId) return;
     try {
@@ -1252,6 +1310,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const handlePrintSubmission = async () => {
     if (!selectedSubmission) return;
     let currentSeq = selectedSubmission.docSeq;
+    const template = admissionTemplates[selectedSubmission.campus] || admissionTemplates['Hải Phòng'];
+
+    // Generate PDF for email attachment
+    let pdfBase64 = null;
+    try {
+      const html = getAdmissionNoticeHtml(template, { ...selectedSubmission, docSeq: currentSeq || '...' }, currentSeq || '..');
+      pdfBase64 = await generateAdmissionNoticePdf(html);
+    } catch (err) {
+      console.error("Lỗi tạo PDF:", err);
+    }
+
     if (!currentSeq) {
       const lastSeq = parseInt(localStorage.getItem('global_admission_seq') || '0');
       const nextSeq = lastSeq + 1;
@@ -1262,7 +1331,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         await api.updateRegistration(selectedSubmission.docId, {
           docSeq: currentSeq,
           status: SubmissionStatus.APPROVED,
-          syncAmounts: true
+          syncAmounts: true,
+          admissionNoticePdf: pdfBase64 // Phải gửi PDF khi duyệt
         });
 
         // Re-fetch data
@@ -1278,9 +1348,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         return;
       }
     } else {
-      await updateCurrentSubmissionStatus(SubmissionStatus.APPROVED);
+      // Nếu đã có số báo danh, chỉ cập nhật PDF và status (nếu cần)
+      try {
+        await api.updateRegistration(selectedSubmission.docId, {
+          status: SubmissionStatus.APPROVED,
+          admissionNoticePdf: pdfBase64
+        });
+        await updateCurrentSubmissionStatus(SubmissionStatus.APPROVED);
+      } catch (err) {
+        console.error("Lỗi cập nhật PDF:", err);
+      }
     }
-    const template = admissionTemplates[selectedSubmission.campus] || admissionTemplates['Hải Phòng'];
+
     renderPrintWindow(template, { ...selectedSubmission, docSeq: currentSeq, status: SubmissionStatus.APPROVED }, currentSeq);
   };
 
@@ -1405,13 +1484,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   };
 
   const handleSyncTuitionFromConfig = async () => {
-    if (approvedSubmissions.length === 0) return alert('Không có dữ liệu trúng tuyển!');
-    if (!window.confirm(`Bạn có chắc muốn đồng bộ lại học phí và bảo hiểm cho ${approvedSubmissions.length} thí sinh từ cấu hình hệ thống?`)) return;
+    if (paginatedTuitionSubmissions.length === 0) return alert('Không có dữ liệu trúng tuyển trên trang này!');
+    if (!window.confirm(`Bạn có chắc muốn đồng bộ lại học phí và bảo hiểm cho ${paginatedTuitionSubmissions.length} thí sinh trên trang này từ hệ thống?`)) return;
 
     setIsLoading(true);
     let successCount = 0;
     try {
-      for (const sub of approvedSubmissions) {
+      for (const sub of paginatedTuitionSubmissions) {
         if (sub.docId) {
           await api.updateRegistration(sub.docId, { syncAmounts: true });
           successCount++;
@@ -1447,7 +1526,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       isHealthSelected: true,
       isComprehensiveSelected: true,
       isUniformSelected: true,
-      files: { frontId: null, backId: null, diploma: null, tempCert: null }
+      files: { frontId: null, backId: null, electronicId: null, diploma: null, tempCert: null }
     };
     if (admissionSubTab === 'Thu học phí') {
       handlePrintInvoice(dummySubmission);
@@ -1480,94 +1559,183 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onload = async (evt) => {
-        const bstr = evt.target?.result;
-        const wb = XLSX.read(bstr, { type: 'binary' });
-        const wsname = wb.SheetNames[0];
-        const ws = wb.Sheets[wsname];
-        const data = XLSX.utils.sheet_to_json(ws, { header: 1 });
+        try {
+          const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+          const workbook = XLSX.read(data, { type: 'array' });
+          const firstSheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[firstSheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
 
-        const rows = data.slice(1) as any[];
-        if (rows.length === 0) return alert('File không có dữ liệu!');
-
-        let successCount = 0;
-        let failCount = 0;
-        let errors: string[] = [];
-
-        console.log('Đang bắt đầu nhập dữ liệu từ Excel...');
-
-        for (const row of rows) {
-          const code = row[0]?.toString() || '';
-          const name = row[1]?.toString() || '';
-          const campusName = (row[2]?.toString() || '').trim();
-          const levelName = (row[3]?.toString() || '').trim();
-          const amountStr = row[4]?.toString().replace(/[^\d]/g, '') || '0';
-          const amount = parseInt(amountStr);
-
-          if (!code || !name) continue;
-
-          // Tìm ID tương ứng cho campus và educationLevel
-          const campus = campusConfigs.find(c => c.name.trim().toLowerCase() === campusName.toLowerCase());
-          const level = educationLevelConfigs.find(l => l.name.trim().toLowerCase() === levelName.toLowerCase());
-
-          if (!campus) {
-            errors.push(`Dòng ${rows.indexOf(row) + 2}: Không tìm thấy cơ sở "${campusName}"`);
-            failCount++;
-            continue;
-          }
-          if (!level) {
-            errors.push(`Dòng ${rows.indexOf(row) + 2}: Không tìm thấy hệ đào tạo "${levelName}"`);
-            failCount++;
-            continue;
+          if (!jsonData || jsonData.length < 2) {
+            return alert('File không có dữ liệu hoặc định dạng không đúng!');
           }
 
-          const configData = {
-            code,
-            name,
-            amount,
-            campus: campus.id,
-            educationLevel: level.id
+          const headers = jsonData[0].map(h => (h?.toString() || '').trim().toLowerCase());
+          const rows = jsonData.slice(1);
+
+          // Find column indices by header name
+          const colMap = {
+            code: headers.findIndex(h => h.includes('mã nghề')),
+            name: headers.findIndex(h => h.includes('tên nghề')),
+            campus: headers.findIndex(h => h.includes('cơ sở')),
+            level: headers.findIndex(h =>
+              h.includes('hệ đào tạo') ||
+              h.includes('he dao tao') ||
+              h === 'hệ'
+            ),
+            amount: headers.findIndex(h => h.includes('học phí')),
           };
 
-          try {
-            await api.createOccupation(configData);
-            successCount++;
-          } catch (error) {
-            console.error(`Lỗi khi nhập ngành ${name}:`, error);
-            errors.push(`Dòng ${rows.indexOf(row) + 2}: Lỗi hệ thống khi lưu "${name}"`);
-            failCount++;
+          if (colMap.code === -1 || colMap.name === -1) {
+            return alert('Không tìm thấy cột "Mã nghề" hoặc "Tên nghề" trong file!');
           }
-        }
 
-        if (successCount > 0 || failCount > 0) {
-          let msg = `Kết quả nhập dữ liệu:\n- Thành công: ${successCount}\n- Thất bại: ${failCount}`;
-          if (errors.length > 0) {
-            msg += `\n\nChi tiết lỗi (20 dòng đầu):\n${errors.slice(0, 20).join('\n')}`;
+          setIsLoading(true);
+          let successCount = 0;
+          let failCount = 0;
+          let skipCount = 0;
+          let errors: string[] = [];
+          const processedCodes = new Set<string>();
+
+          for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const code = (colMap.code !== -1 ? row[colMap.code]?.toString().trim() : '') || '';
+            const name = (colMap.name !== -1 ? row[colMap.name]?.toString().trim() : '') || '';
+            const campusName = (colMap.campus !== -1 ? row[colMap.campus]?.toString().trim() : '') || '';
+            const levelName = (colMap.level !== -1 ? row[colMap.level]?.toString().trim() : '') || '';
+            const amountStr = (colMap.amount !== -1 ? row[colMap.amount]?.toString().replace(/[^\d]/g, '') : '0') || '0';
+            const amount = parseInt(amountStr);
+
+            if (!code && !name) continue; // Skip empty rows
+
+            if (!code || !name) {
+              errors.push(`Dòng ${i + 2}: Thiếu Mã nghề hoặc Tên nghề.`);
+              failCount++;
+              continue;
+            }
+
+            // Client-side duplicate check within the file
+            const rowKey = `${code}-${campusName}-${levelName}`.toLowerCase();
+            if (processedCodes.has(rowKey)) {
+              errors.push(`Dòng ${i + 2}: Mã nghề "${code}" bị lặp lại trong file Excel.`);
+              skipCount++;
+              continue;
+            }
+            processedCodes.add(rowKey);
+
+            const campus = campusConfigs.find(c =>
+              c.name.trim().toLowerCase() === campusName.toLowerCase() ||
+              c.code.trim().toLowerCase() === campusName.toLowerCase()
+            );
+
+            const level = educationLevelConfigs.find(l =>
+              l.name.trim().toLowerCase() === levelName.toLowerCase() ||
+              l.code.trim().toLowerCase() === levelName.toLowerCase()
+            );
+
+            if (!campus) {
+              errors.push(`Dòng ${i + 2}: Cơ sở "${campusName}" không tồn tại.`);
+              failCount++;
+              continue;
+            }
+            if (!level) {
+              const validLevels = educationLevelConfigs.map((l: any) => l.name).join(', ');
+              errors.push(`Dòng ${i + 2}: Hệ đào tạo "${levelName}" không hợp lệ. Hệ hợp lệ: [${validLevels}]`);
+              failCount++;
+              continue;
+            }
+
+            // Server-side check: Search if this occupation code exists for this campus/level
+            const existing = tuitionConfigs.find(occ =>
+              occ.code.toLowerCase() === code.toLowerCase() &&
+              occ.campus === campus.name &&
+              occ.educationLevel === level.name
+            );
+
+            if (existing) {
+              errors.push(`Dòng ${i + 2}: Mã "${code}" đã tồn tại trong hệ thống.`);
+              skipCount++;
+              continue;
+            }
+
+            try {
+              await api.createOccupation({
+                code,
+                name,
+                amount,
+                campus: (campus as any)?.numericId || campus?.id,
+                educationLevel: (level as any)?.numericId || level?.id
+              });
+              successCount++;
+            } catch (error) {
+              errors.push(`Dòng ${i + 2}: Lỗi khi lưu "${name}".`);
+              failCount++;
+            }
           }
-          alert(msg);
+
+          setIsLoading(false);
+          alert(`NHẬP DỮ LIỆU HOÀN TẤT:\n- Thành công: ${successCount}\n- Bị trùng (bỏ qua): ${skipCount}\n- Thất bại: ${failCount}${errors.length > 0 ? '\n\n' + errors.slice(0, 10).join('\n') : ''}`);
           if (successCount > 0) fetchData();
+
+        } catch (err) {
+          console.error("Lỗi đọc file:", err);
+          alert("Lỗi khi đọc file Excel. Vui lòng thử lại với định dạng .xlsx chuẩn.");
         }
 
         if (fileInputRef.current) fileInputRef.current.value = '';
       };
-      reader.readAsBinaryString(file);
+      reader.readAsArrayBuffer(file);
     }
   };
 
   const handleDownloadTemplate = () => {
-    const headers = ['Mã nghề', 'Tên nghề đào tạo', 'Cơ sở', 'Hệ', 'Học phí'];
-    const sampleData = [
-      ['001', 'LẬP TRÌNH WEB', 'Nam Đồng', 'Cao đẳng', '5000000'],
-      ['002', 'LẬP TRÌNH MOBILE', 'Nam Đồng', 'Trung cấp', '4500000']
-    ];
+    const headers = ['Mã nghề', 'Tên nghề đào tạo', 'Cơ sở', 'Hệ đào tạo', 'Học phí'];
+
+    // Tạo dữ liệu mẫu: mỗi cơ sở x mỗi hệ đào tạo có 1 dòng mẫu
+    const sampleData: any[][] = [];
+    let sampleIdx = 1;
+    const campusList = campusConfigs.length > 0 ? campusConfigs : [{ name: 'Hải Phòng', code: 'HP' }];
+    const levelList = educationLevelConfigs.length > 0 ? educationLevelConfigs : [{ name: 'Cao đẳng', code: 'CD' }];
+
+    campusList.forEach((campus: any) => {
+      levelList.forEach((level: any) => {
+        sampleData.push([
+          `K76480201${sampleIdx.toString().padStart(2, '0')}`,
+          'TÊN NGHỀ ĐÀO TẠO (ví dụ)',
+          campus.name,
+          level.name,
+          '5000000'
+        ]);
+        sampleIdx++;
+      });
+    });
+
     const wb = XLSX.utils.book_new();
     const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
-    XLSX.utils.book_append_sheet(wb, ws, 'Mau_nhap_hoc_phi');
+    ws['!cols'] = [{ wch: 18 }, { wch: 50 }, { wch: 30 }, { wch: 25 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws, 'Du_lieu_nhap');
+
+    // Sheet hướng dẫn
+    const campusValues = campusList.map((c: any) => c.name).join(', ');
+    const levelValues = levelList.map((l: any) => l.name).join(', ');
+    const guide: any[][] = [
+      ['TRƯỜNG DỮ LIỆU', 'YÊU CẦU', 'GIÁ TRỊ HỢP LỆ (phải khớp chính xác)'],
+      ['Mã nghề', 'Bắt buộc – Duy nhất theo Cơ sở + Hệ', 'Chuỗi ký tự (vd: K7648020101)'],
+      ['Tên nghề đào tạo', 'Bắt buộc', 'Chuỗi ký tự tên nghề'],
+      ['Cơ sở', 'Bắt buộc – Phải khớp chính xác', campusValues],
+      ['Hệ đào tạo', 'Bắt buộc – Phải khớp chính xác', levelValues],
+      ['Học phí', 'Số nguyên (VNĐ)', 'vd: 5000000'],
+      [],
+      ['LƯU Ý QUAN TRỌNG', 'Cột "Hệ đào tạo" phải nhập đúng tên như cột bên phải. Sai tên sẽ bị BỎ QUA khi import.', '']
+    ];
+    const wsGuide = XLSX.utils.aoa_to_sheet(guide);
+    wsGuide['!cols'] = [{ wch: 22 }, { wch: 55 }, { wch: 50 }];
+    XLSX.utils.book_append_sheet(wb, wsGuide, 'Huong_dan');
+
     XLSX.writeFile(wb, 'Mau_cau_hinh_hoc_phi.xlsx');
   };
 
-  const renderPrintWindow = (template: AdmissionTemplate, submission: any, docNumber?: string) => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+  const getAdmissionNoticeHtml = (template: AdmissionTemplate, submission: any, docNumber?: string) => {
     const now = new Date();
     const currentDay = now.getDate().toString().padStart(2, '0');
     const currentMonth = (now.getMonth() + 1).toString().padStart(2, '0');
@@ -1579,127 +1747,164 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const cAmt = submission.isComprehensiveSelected ? (submission.comprehensiveAmount || 0) : 0;
     const totalAmt = tAmt + hAmt + cAmt;
 
+    return `
+      <div class="admission-notice-container" style="font-family: Arial, sans-serif; color: #000; line-height: 1.15; font-size: 13pt; width: 210mm; min-height: 297mm; padding: 15mm 15mm 15mm 10mm; box-sizing: border-box; background: white;">
+        <style>
+          .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
+          .header-left { text-align: center; width: 48%; }
+          .header-right { text-align: center; width: 48%; }
+          .school-name-small { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 1px; white-space: nowrap; }
+          .school-name-large { font-weight: bold; font-size: 11pt; text-transform: uppercase; line-height: 1.1; }
+          .line-under { border-bottom: 1.5px solid #000; display: inline-block; width: 55%; margin-top: 1px; }
+          .doc-number { font-size: 11pt; margin-top: 5px; }
+          .nation-name { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 1px; }
+          .nation-slogan { font-weight: bold; font-size: 12pt; margin-bottom: 0px; }
+          .doc-date { font-style: italic; font-size: 12pt; text-align: right; margin-top: 5px; }
+          .main-title { text-align: center; font-weight: bold; font-size: 15pt; margin: 20px 0 10px 0; text-transform: uppercase; }
+          .basis { text-align: justify; font-style: italic; font-size: 12pt; margin-bottom: 10px; line-height: 1.15; }
+          .announcer { text-align: center; font-weight: bold; font-size: 12pt; margin-bottom: 20px; text-transform: uppercase; }
+          .content-row { margin-bottom: 5px; display: flex; align-items: baseline; }
+          .label { width: 210px; flex-shrink: 0; }
+          .value { font-weight: bold; }
+          .full-width-row { margin: 8px 0; text-align: justify; }
+          .section-bold { font-weight: bold; margin: 3px 0 3px 0; font-size: 13pt; }
+          .requirement-item { margin-bottom: 1px; padding-left: 0px; text-align: justify; font-weight: bold; line-height: 1.15; }
+          .fees-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
+          .fees-table th, .fees-table td { border: 1px solid black; padding: 3px 6px; font-size: 10pt; }
+          .fees-table th { text-align: center; font-weight: bold; }
+          .center { text-align: center; }
+          .right { text-align: right; }
+          .bold { font-weight: bold; }
+          .contact-info { margin-top: 5px; font-style: italic; font-size: 12pt; text-align: justify; line-height: 1.15; }
+          .contact-info b { font-weight: bold; font-style: normal; }
+          .footer-area { display: flex; justify-content: space-between; margin-top: 10px; align-items: flex-start; }
+          .qr-side { width: 45%; display: flex; flex-direction: column; align-items: flex-start; }
+          .qr-box { width: 110px; height: 110px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; overflow: hidden; }
+          .qr-box img { width: 100%; height: 100%; object-fit: contain; }
+          .qr-label { font-size: 9pt; line-height: 1.2; text-align: left; font-style: italic; font-weight: bold; }
+          .signature-side { width: 50%; text-align: center; }
+          .sig-title { font-weight: bold; text-transform: uppercase; margin-bottom: 100px; white-space: pre-line; line-height: 1.1; font-size: 12pt; }
+          .sig-name { font-weight: bold; font-size: 13pt; }
+        </style>
+        
+        <div class="header-top">
+          <div class="header-left">
+            <div class="school-name-small">CỤC HÀNG HẢI VÀ ĐƯỜNG THỦY VIỆT NAM</div>
+            <div class="school-name-large">TRƯỜNG CAO ĐẲNG<br>HÀNG HẢI VÀ ĐƯỜNG THỦY I</div>
+            <div><div class="line-under"></div></div>
+            <div class="doc-number">Số: ${displayNum}/GTT-CĐHHĐTI</div>
+          </div>
+          <div class="header-right">
+            <div class="nation-name">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+            <div class="nation-slogan">Độc lập - Tự do - Hạnh phúc</div>
+            <div><div class="line-under"></div></div>
+            <div class="doc-date">Hải Phòng, ngày ${currentDay} tháng ${currentMonth} năm ${currentYear}</div>
+          </div>
+        </div>
+        <div class="main-title">${template.title}</div>
+        <div class="basis">${template.basis}</div>
+        <div class="announcer">${template.announcer}</div>
+        <div class="content-row">
+          <span class="label">Báo cho thí sinh:</span>
+          <span class="value" style="font-size: 14pt;">${submission.fullName}</span>
+          <span style="margin-left: auto;">Ngày sinh: <span class="value">${(() => { try { const d = new Date(submission.dob); if (isNaN(d.getTime())) return submission.dob || ''; return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear(); } catch { return submission.dob || ''; } })()}</span></span>
+        </div>
+        <div class="content-row">
+          <span class="label">Địa chỉ thường trú:</span>
+          <span class="value">${submission.addressDetails}, ${submission.district}, ${submission.province}</span>
+        </div>
+        <div class="full-width-row">Đã trúng tuyển vào Trường Cao đẳng Hàng hải và Đường thủy I, trình độ <b>${submission.educationLevel || 'Cao đẳng'}</b> năm ${currentYear};</div>
+        <div class="content-row">
+          <span class="label">Nghề đào tạo đăng ký học:</span>
+          <span class="value">${submission.choice1Major} (Mã: ${submission.choice1Specialty})</span>
+        </div>
+        <div class="content-row">
+          <span class="label">Thời gian nhập học:</span>
+          <span class="value">${template.admissionHour || '........'} giờ, ngày ${template.admissionDay || '....'} tháng ${template.admissionMonth || '....'} năm ${template.admissionYear || '....'}</span>
+        </div>
+        <div class="content-row">
+          <span class="label">Địa điểm nhập học:</span>
+          <span style="font-size: 11pt;">${template.location}</span>
+        </div>
+        <div class="section-bold">Khi đến trường nhập học, thí sinh cần mang theo:</div>
+        ${template.requirements?.map((req: any, idx: number) => `<div class="requirement-item">${idx + 1}. ${req}</div>`).join('') || ''}
+        <div class="section-bold">7. Các khoản thu:</div>
+        <table style="width:100%;border-collapse:collapse;margin:4mm 0 5px 0;font-size:10pt;line-height:1.4;">
+          <thead>
+            <tr>
+              <th style="width:8%;border:1px solid black;padding:5px 6px;text-align:center;font-weight:bold;background:#f0f0f0;">STT</th>
+              <th style="width:67%;border:1px solid black;padding:5px 6px;text-align:center;font-weight:bold;background:#f0f0f0;word-break:break-word;">Tên khoản nộp</th>
+              <th style="width:25%;border:1px solid black;padding:5px 6px;text-align:center;font-weight:bold;background:#f0f0f0;white-space:nowrap;">Cộng</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="border:1px solid black;padding:5px 6px;text-align:center;">1</td>
+              <td style="border:1px solid black;padding:5px 6px;word-break:break-word;">Học phí học kỳ 1</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:right;white-space:nowrap;">${tAmt > 0 ? tAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+            </tr>
+            <tr>
+              <td style="border:1px solid black;padding:5px 6px;text-align:center;">2</td>
+              <td style="border:1px solid black;padding:5px 6px;word-break:break-word;">Phí bảo hiểm Y tế (1 năm)</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:right;white-space:nowrap;">${hAmt > 0 ? hAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+            </tr>
+            <tr>
+              <td style="border:1px solid black;padding:5px 6px;text-align:center;">3</td>
+              <td style="border:1px solid black;padding:5px 6px;word-break:break-word;">Phí bảo hiểm Toàn diện (1 năm)</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:right;white-space:nowrap;">${cAmt > 0 ? cAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+            </tr>
+            <tr>
+              <td colspan="2" style="border:1px solid black;padding:5px 6px;text-align:center;font-weight:bold;">TỔNG CỘNG:</td>
+              <td style="border:1px solid black;padding:5px 6px;text-align:right;font-weight:bold;white-space:nowrap;">${totalAmt > 0 ? totalAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="contact-info">Để biết thêm thông tin chi tiết thí sinh liên hệ với phòng <b>Công tác HS-SV</b>, Hotline: <b>${template.hotline}</b> hoặc xem trên Website: <b>${template.website}</b></div>
+        <div class="footer-area">
+          <div class="qr-side">
+            <div class="qr-box"><img src="${qrSrc}" alt="QR Map" /></div>
+            <div class="qr-label">Quét mã để xem đường đi<br>đến Trường CĐ HH&ĐT I</div>
+          </div>
+          <div class="signature-side">
+            <div class="sig-title">${template.footerTitle}</div>
+            <div class="sig-name">${template.footerName}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  };
+
+  const generateAdmissionNoticePdf = async (fragment: string): Promise<string> => {
+    const opt = {
+      margin: 0,
+      filename: 'Giay_bao_nhap_hoc.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    try {
+      // Use the string directly which is supported by html2pdf
+      const pdfBase64 = await html2pdf().set(opt).from(fragment).outputPdf('datauristring');
+      return pdfBase64;
+    } catch (err) {
+      console.error("Lỗi tạo PDF:", err);
+      return "";
+    }
+  };
+
+  const renderPrintWindow = (template: AdmissionTemplate, submission: any, docNumber?: string) => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+    const fragment = getAdmissionNoticeHtml(template, submission, docNumber);
     printWindow.document.write(`
       <html>
         <head>
           <title>${template.title} - ${submission.fullName}</title>
-          <style>
-            @page { size: A4; margin: 0; }
-            html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; }
-            body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: #000; line-height: 1.15; font-size: 13pt; display: flex; flex-direction: column; justify-content: flex-start; align-items: center; }
-            .page-container { width: 210mm; height: 297mm; padding: 15mm 15mm 15mm 20mm; box-sizing: border-box; display: flex; flex-direction: column; position: relative; }
-            .header-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2px; }
-            .header-left { text-align: center; width: 48%; }
-            .header-right { text-align: center; width: 48%; }
-            .school-name-small { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 1px; white-space: nowrap; }
-            .school-name-large { font-weight: bold; font-size: 11pt; text-transform: uppercase; line-height: 1.1; }
-            .line-under { border-bottom: 1.5px solid #000; display: inline-block; width: 55%; margin-top: 1px; }
-            .doc-number { font-size: 11pt; margin-top: 5px; }
-            .nation-name { font-weight: bold; font-size: 11pt; text-transform: uppercase; margin-bottom: 1px; }
-            .nation-slogan { font-weight: bold; font-size: 12pt; margin-bottom: 0px; }
-            .doc-date { font-style: italic; font-size: 12pt; text-align: right; margin-top: 5px; }
-            .main-title { text-align: center; font-weight: bold; font-size: 15pt; margin: 20px 0 10px 0; text-transform: uppercase; }
-            .basis { text-align: justify; font-style: italic; font-size: 12pt; margin-bottom: 10px; line-height: 1.15; }
-            .announcer { text-align: center; font-weight: bold; font-size: 12pt; margin-bottom: 20px; text-transform: uppercase; }
-            .content-row { margin-bottom: 5px; display: flex; align-items: baseline; }
-            .label { width: 210px; flex-shrink: 0; }
-            .value { font-weight: bold; }
-            .full-width-row { margin: 8px 0; text-align: justify; }
-            .section-bold { font-weight: bold; margin: 3px 0 3px 0; font-size: 13pt; }
-            .requirement-item { margin-bottom: 1px; padding-left: 0px; text-align: justify; font-weight: bold; line-height: 1.15; }
-            .fees-table { width: 100%; border-collapse: collapse; margin: 5px 0; }
-            .fees-table th, .fees-table td { border: 1px solid black; padding: 4px 8px; font-size: 12pt; }
-            .fees-table th { text-align: center; font-weight: bold; }
-            .center { text-align: center; }
-            .right { text-align: right; }
-            .bold { font-weight: bold; }
-            .contact-info { margin-top: 5px; font-style: italic; font-size: 12pt; text-align: justify; line-height: 1.15; }
-            .contact-info b { font-weight: bold; font-style: normal; }
-            .footer-area { display: flex; justify-content: space-between; margin-top: 10px; align-items: flex-start; padding-bottom: 5mm; }
-            .qr-side { width: 45%; display: flex; flex-direction: column; align-items: flex-start; }
-            .qr-box { width: 110px; height: 110px; border: 1px solid #000; display: flex; align-items: center; justify-content: center; margin-bottom: 5px; overflow: hidden; }
-            .qr-box img { width: 100%; height: 100%; object-fit: contain; }
-            .qr-label { font-size: 9pt; line-height: 1.2; text-align: left; font-style: italic; font-weight: bold; }
-            .signature-side { width: 50%; text-align: center; }
-            .sig-title { font-weight: bold; text-transform: uppercase; margin-bottom: 100px; white-space: pre-line; line-height: 1.1; font-size: 12pt; }
-            .sig-name { font-weight: bold; font-size: 13pt; }
-            @media print { .no-print { display: none; } body, .page-container { -webkit-print-color-adjust: exact; } }
-          </style>
+          <style>@page { size: A4; margin: 0; } body { margin: 0; padding: 0; }</style>
         </head>
         <body>
-          <div class="page-container">
-            <div class="header-top">
-              <div class="header-left">
-                <div class="school-name-small">CỤC HÀNG HẢI VÀ ĐƯỜNG THỦY VIỆT NAM</div>
-                <div class="school-name-large">TRƯỜNG CAO ĐẲNG<br>HÀNG HẢI VÀ ĐƯỜNG THỦY I</div>
-                <div><div class="line-under"></div></div>
-                <div class="doc-number">Số: ${displayNum}/GTT-CĐHHĐTI</div>
-              </div>
-              <div class="header-right">
-                <div class="nation-name">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div class="nation-slogan">Độc lập - Tự do - Hạnh phúc</div>
-                <div><div class="line-under"></div></div>
-                <div class="doc-date">Hải Phòng, ngày ${currentDay} tháng ${currentMonth} năm ${currentYear}</div>
-              </div>
-            </div>
-            <div class="main-title">${template.title}</div>
-            <div class="basis">${template.basis}</div>
-            <div class="announcer">${template.announcer}</div>
-            <div class="content-row">
-              <span class="label">Báo cho thí sinh:</span>
-              <span class="value" style="font-size: 14pt;">${submission.fullName}</span>
-              <span style="margin-left: auto;">Ngày sinh: <span class="value">${new Date(submission.dob).toLocaleDateString('vi-VN')}</span></span>
-            </div>
-            <div class="content-row">
-              <span class="label">Địa chỉ thường trú:</span>
-              <span class="value">${submission.addressDetails}, ${submission.district}, ${submission.province}</span>
-            </div>
-            <div class="full-width-row">Đã trúng tuyển vào Trường Cao đẳng Hàng hải và Đường thủy I, trình độ <b>${submission.educationLevel || 'Cao đẳng'}</b> năm ${currentYear};</div>
-            <div class="content-row">
-              <span class="label">Nghề đào tạo đăng ký học:</span>
-              <span class="value">${submission.choice1Major} (Mã: ${submission.choice1Specialty})</span>
-            </div>
-            <div class="content-row">
-              <span class="label">Thời gian nhập học:</span>
-              <span class="value">${template.admissionHour || '........'} giờ, ngày ${template.admissionDay || '....'} tháng ${template.admissionMonth || '....'} năm ${template.admissionYear || '....'}</span>
-            </div>
-            <div class="content-row">
-              <span class="label">Địa điểm nhập học:</span>
-              <span style="font-size: 11pt;">${template.location}</span>
-            </div>
-            <div class="section-bold">Khi đến trường nhập học, thí sinh cần mang theo:</div>
-            ${template.requirements.map((req, idx) => `<div class="requirement-item">${idx + 1}. ${req}</div>`).join('')}
-            <div class="section-bold">7. Các khoản thu:</div>
-            <table class="fees-table">
-              <thead>
-                <tr>
-                  <th width="8%">STT</th>
-                  <th width="67%">Tên khoản nộp</th>
-                  <th width="25%">Cộng</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><td class="center">1</td><td>Học phí học kỳ 1</td><td class="right">${tAmt > 0 ? tAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
-                <tr><td class="center">2</td><td>Phí bảo hiểm Y tế (1 năm)</td><td class="right">${hAmt > 0 ? hAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
-                <tr><td class="center">3</td><td>Phí bảo hiểm Toàn diện (1 năm)</td><td class="right">${cAmt > 0 ? cAmt.toLocaleString('vi-VN') + ' đ' : ''}</td></tr>
-                <tr class="bold">
-                  <td colspan="2" class="center">TỔNG CỘNG:</td>
-                  <td class="right">${totalAmt > 0 ? totalAmt.toLocaleString('vi-VN') + ' đ' : ''}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div class="contact-info">Để biết thêm thông tin chi tiết thí sinh liên hệ với phòng <b>Công tác HS-SV</b>, Hotline: <b>${template.hotline}</b> hoặc xem trên Website: <b>${template.website}</b></div>
-            <div class="footer-area">
-              <div class="qr-side">
-                <div class="qr-box"><img src="${qrSrc}" alt="QR Map" /></div>
-                <div class="qr-label">Quét mã để xem đường đi<br>đến Trường CĐ HH&ĐT I</div>
-              </div>
-              <div class="signature-side">
-                <div class="sig-title">${template.footerTitle}</div>
-                <div class="sig-name">${template.footerName}</div>
-              </div>
-            </div>
-          </div>
+          ${fragment}
           <script>
             window.onload = () => { setTimeout(() => { window.print(); window.onafterprint = () => window.close(); }, 300); };
           </script>
@@ -1720,11 +1925,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   };
 
   const isAdmin = user?.role === 'Quản trị viên';
+  const formatDateValue = (date: any) => {
+    if (!date) return '';
+    try {
+      const d = new Date(date);
+      if (isNaN(d.getTime())) return '';
+      const day = String(d.getDate()).padStart(2, '0');
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const year = d.getFullYear();
+      return `${day}/${month}/${year}`;
+    } catch {
+      return '';
+    }
+  };
+  const isPowerUser = user?.role === 'Quản trị viên' || user?.role === 'Kế toán';
   const EditIcon = () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>);
   const DeleteIcon = () => (<svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2m-3 0h10" /></svg>);
 
-  const uniqueFilterCampuses = Array.from(new Set(tuitionConfigs.map(c => c.campus))).filter(Boolean).sort();
-  const uniqueFilterLevels = Array.from(new Set(tuitionConfigs.map(c => c.educationLevel))).filter(Boolean).sort();
+  const uniqueFilterCampuses = campusConfigs.map(c => c.name);
+  const uniqueFilterLevels = educationLevelConfigs.map(l => l.name);
   const uniqueFilterMajors = Array.from(new Set(tuitionConfigs.map(c => c.name))).filter(Boolean).sort();
 
   return (
@@ -1770,11 +1989,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
               <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 min-w-[120px]"><span className="text-[10px] text-blue-600 font-extrabold uppercase block mb-0.5">Tổng số</span><span className="text-xl font-black text-blue-900">{totalCount}</span></div>
-              <select disabled={!isAdmin} className={`bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none ${!isAdmin ? 'opacity-50 cursor-not-allowed' : ''}`} value={filterCampus} onChange={e => setFilterCampus(e.target.value)}><option value="">Tất cả cơ sở</option>{uniqueFilterCampuses.map(c => <option key={c} value={c}>{c}</option>)}</select>
-              <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none" value={filterLevel} onChange={e => setFilterLevel(e.target.value)}><option value="">Tất cả hệ đào tạo</option>{uniqueFilterLevels.map(l => <option key={l} value={l}>{l}</option>)}</select>
-              <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none max-w-[200px]" value={filterMajor} onChange={e => setFilterMajor(e.target.value)}><option value="">Tất cả nghề đào tạo</option>{uniqueFilterMajors.map((m, idx) => <option key={idx} value={m}>{m}</option>)}</select>
+              <select disabled={!isPowerUser} className={`bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none ${!isPowerUser ? 'opacity-50 cursor-not-allowed' : ''}`} value={filterCampus} onChange={e => { setFilterCampus(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả cơ sở</option>{uniqueFilterCampuses.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none" value={filterLevel} onChange={e => { setFilterLevel(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả hệ đào tạo</option>{uniqueFilterLevels.map(l => <option key={l} value={l}>{l}</option>)}</select>
+              <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none max-w-[200px]" value={filterMajor} onChange={e => { setFilterMajor(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả nghề đào tạo</option>{uniqueFilterMajors.map((m, idx) => <option key={idx} value={m}>{m}</option>)}</select>
               <button onClick={handleExportExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
-              <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
+              <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
             </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Thao tác nhanh:</span><ActionButton label="Tiếp nhận" color="blue" onClick={() => updateStatusForSelected(SubmissionStatus.RECEIVED)} />{user?.role !== 'Cán bộ tiếp nhận' && (<><ActionButton label="Duyệt trúng tuyển" color="green" onClick={() => updateStatusForSelected(SubmissionStatus.APPROVED)} /><ActionButton label="Khóa hồ sơ" color="slate" onClick={() => updateStatusForSelected(SubmissionStatus.LOCKED)} /><ActionButton label="Hủy trạng thái" color="orange" onClick={() => updateStatusForSelected(SubmissionStatus.PENDING)} /></>)}{isAdmin && <ActionButton label="Xóa hồ sơ" color="red" onClick={handleDeleteSelected} />}</div>
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
@@ -1794,7 +2013,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                         <td className="px-4 py-4"><span className="bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-purple-100 uppercase whitespace-nowrap tracking-wider">{s.educationLevel}</span></td>
                         <td className="px-4 py-4"><div className="flex flex-col"><span className="text-gray-950 font-black text-[11px] leading-tight block max-w-[180px] uppercase">{s.choice1Major}</span><span className="text-gray-400 text-[9px] font-bold uppercase mt-0.5">Mã nghề: {s.choice1Specialty}</span></div></td>
                         <td className="px-4 py-4 text-center"><span className={`inline-block px-3 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-widest whitespace-nowrap ${getStatusStyle(s.status)}`}>{s.status}</span></td>
-                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => handleViewDetail(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button><button onClick={() => handleViewDetail(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button></div></td>
+                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => handleViewDetail(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button><button onClick={() => handleViewDetail(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button><button onClick={() => handleDeleteSingle(s.docId)} className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-all" title="Xóa hồ sơ"><DeleteIcon /></button></div></td>
                       </tr>
                     ))}
                   </tbody>
@@ -1837,7 +2056,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </div>
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
-              <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[120px]"><span className="text-[10px] text-emerald-600 font-extrabold uppercase block mb-0.5">Trúng tuyển</span><span className="text-xl font-black text-emerald-900">{approvedSubmissions.length}</span></div>
+              <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[120px]"><span className="text-[10px] text-emerald-600 font-extrabold uppercase block mb-0.5">Trúng tuyển</span><span className="text-xl font-black text-emerald-900">{tuitionTotalCount}</span></div>
               <button
                 onClick={handleSyncTuitionFromConfig}
                 className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -1849,7 +2068,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 {isLoading ? 'Đang đồng bộ...' : 'Đồng bộ từ cấu hình'}
               </button>
               <button onClick={handleExportTuitionExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
-              <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
+              <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setTuitionPagination(prev => ({ ...prev, page: 1 })); }} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
             </div>
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
               <table className="w-full text-left">
@@ -1859,7 +2078,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {isTuitionLoading ? (
                     <tr><td colSpan={12} className="px-6 py-10 text-center text-blue-600 font-bold italic animate-pulse">Đang nạp toàn bộ danh sách trúng tuyển...</td></tr>
-                  ) : approvedSubmissions.length === 0 ? (
+                  ) : tuitionTotalCount === 0 ? (
                     <tr><td colSpan={12} className="px-6 py-10 text-center text-gray-400 italic font-medium bg-gray-50/20">Chưa có thí sinh trúng tuyển nào trong danh sách lọc hiện tại.</td></tr>
                   ) : (
                     paginatedTuitionSubmissions.map(s => {
@@ -1934,7 +2153,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               {/* Tuition Pagination Controls */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                  Hiển thị {(tuitionPagination.page - 1) * tuitionPagination.pageSize + 1} - {Math.min(tuitionPagination.page * tuitionPagination.pageSize, approvedSubmissions.length)} / {approvedSubmissions.length} hồ sơ trúng tuyển
+                  Hiển thị {(tuitionPagination.page - 1) * tuitionPagination.pageSize + 1} - {Math.min(tuitionPagination.page * tuitionPagination.pageSize, tuitionTotalCount)} / {tuitionTotalCount} hồ sơ trúng tuyển
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -1945,10 +2164,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                   </button>
                   <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-emerald-900 text-xs font-black">
-                    Trang {tuitionPagination.page} / {Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize) || 1}
+                    Trang {tuitionPagination.page} / {Math.ceil(tuitionTotalCount / tuitionPagination.pageSize) || 1}
                   </div>
                   <button
-                    disabled={tuitionPagination.page >= Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize)}
+                    disabled={tuitionPagination.page >= Math.ceil(tuitionTotalCount / tuitionPagination.pageSize)}
                     onClick={() => setTuitionPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                     className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >
@@ -2070,19 +2289,106 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </>
             ) : tuitionSubTab === 'majors' ? (
               <>
-                <div className="flex justify-end mb-4 gap-2">
-                  <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx, .xls" className="hidden" />
-                  <button onClick={handleDownloadTemplate} className="px-6 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button>
-                  <button onClick={handleExcelImport} className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>Nhập từ Excel</button>
-                  <button onClick={() => { setEditingTuition(null); setIsTuitionModalOpen(true); }} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức học phí</button>
+                <div className="flex justify-between items-center mb-4 gap-2">
+                  <div className="relative flex-1 max-w-sm">
+                    <input
+                      type="text"
+                      placeholder="Tìm mã nghề, tên nghề, cơ sở..."
+                      className="w-full bg-white border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm"
+                      value={configSearchTerm}
+                      onChange={e => { setConfigSearchTerm(e.target.value); setMajorPage(1); }}
+                    />
+                    <svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                  </div>
+                  <div className="flex gap-2">
+                    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx, .xls" className="hidden" />
+                    <button onClick={handleDownloadTemplate} className="px-6 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button>
+                    <button onClick={handleExcelImport} className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>Nhập từ Excel</button>
+                    <button onClick={handleClearAllOccupations} className="px-6 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all flex items-center gap-2" title="Xóa toàn bộ danh mục để nhập mới"><DeleteIcon /> Xóa sạch danh mục</button>
+                    <button onClick={() => { setEditingTuition(null); setIsTuitionModalOpen(true); }} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức học phí</button>
+                  </div>
                 </div>
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left">
                     <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
                       <tr><th className="px-6 py-4">Mã nghề</th><th className="px-6 py-4">Tên nghề đào tạo</th><th className="px-6 py-4">Cơ sở</th><th className="px-6 py-4">Hệ</th><th className="px-6 py-4 text-center">Học phí</th><th className="px-6 py-4 text-center">Thao tác</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">{tuitionConfigs.length === 0 ? (<tr><td colSpan={6} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình học phí nào</td></tr>) : (tuitionConfigs.map(config => (<tr key={config.id} className="hover:bg-gray-50/50 transition-colors"><td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td><td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td><td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td><td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td><td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td><td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td></tr>)))}</tbody>
+                    <tbody className="divide-y divide-gray-100">
+                      {(() => {
+                        const searchLower = configSearchTerm.toLowerCase();
+                        const filtered = tuitionConfigs.filter(config =>
+                          config.name.toLowerCase().includes(searchLower) ||
+                          config.code.toLowerCase().includes(searchLower) ||
+                          config.campus.toLowerCase().includes(searchLower) ||
+                          config.educationLevel.toLowerCase().includes(searchLower)
+                        );
+                        const totalPages = Math.ceil(filtered.length / MAJORS_PER_PAGE);
+                        const safePage = Math.min(majorPage, Math.max(1, totalPages));
+                        const paginated = filtered.slice((safePage - 1) * MAJORS_PER_PAGE, safePage * MAJORS_PER_PAGE);
+                        if (filtered.length === 0) return (
+                          <tr><td colSpan={6} className="px-8 py-10 text-center text-gray-400 italic">Không tìm thấy kết quả phù hợp</td></tr>
+                        );
+                        return paginated.map(config => (
+                          <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
+                            <td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td>
+                            <td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td>
+                            <td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td>
+                            <td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td>
+                            <td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td>
+                            <td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td>
+                          </tr>
+                        ));
+                      })()}
+                    </tbody>
                   </table>
+                  {(() => {
+                    const searchLower = configSearchTerm.toLowerCase();
+                    const filtered = tuitionConfigs.filter(config =>
+                      config.name.toLowerCase().includes(searchLower) ||
+                      config.code.toLowerCase().includes(searchLower) ||
+                      config.campus.toLowerCase().includes(searchLower) ||
+                      config.educationLevel.toLowerCase().includes(searchLower)
+                    );
+                    const totalPages = Math.ceil(filtered.length / MAJORS_PER_PAGE);
+                    if (totalPages <= 1) return null;
+                    const safePage = Math.min(majorPage, Math.max(1, totalPages));
+                    const startItem = (safePage - 1) * MAJORS_PER_PAGE + 1;
+                    const endItem = Math.min(safePage * MAJORS_PER_PAGE, filtered.length);
+                    return (
+                      <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+                        <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                          Hiển thị {startItem}–{endItem} / {filtered.length} nghề
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            disabled={safePage <= 1}
+                            onClick={() => setMajorPage(p => Math.max(1, p - 1))}
+                            className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
+                          </button>
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                            <button
+                              key={p}
+                              onClick={() => setMajorPage(p)}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${p === safePage ? 'bg-blue-900 text-white border-blue-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:border-blue-200'}`}
+                            >
+                              {p}
+                            </button>
+                          ))}
+                          <button
+                            disabled={safePage >= totalPages}
+                            onClick={() => setMajorPage(p => Math.min(totalPages, p + 1))}
+                            className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" /></svg>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             ) : tuitionSubTab === 'health' ? (
@@ -2156,7 +2462,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Họ và tên</label><input name="fullName" defaultValue={editingUser?.fullName} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold text-blue-900" /></div>
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tên đăng nhập</label><input name="username" defaultValue={editingUser?.username} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-medium" /></div>
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Mật khẩu</label><input name="password" type="password" required={!editingUser} placeholder={editingUser ? "•••••••• (Bỏ trống nếu không đổi)" : "••••••••"} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-medium" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tên cơ sở {selectedRole !== 'Quản trị viên' && <span className="text-red-500">*</span>}</label><select name="campus" required={selectedRole !== 'Quản trị viên'} defaultValue={editingUser?.campus || ''} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="">-- Chọn cơ sở --</option>{CAMPUSES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tên cơ sở {selectedRole !== 'Quản trị viên' && <span className="text-red-500">*</span>}</label><select name="campus" required={selectedRole !== 'Quản trị viên'} defaultValue={editingUser?.campus || ''} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="">-- Chọn cơ sở --</option>{campusConfigs.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div>
               <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Vai trò hệ thống</label><select name="role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as any)} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="Quản trị viên">Quản trị viên</option><option value="Cán bộ tiếp nhận">Cán bộ tiếp nhận</option><option value="Cán bộ duyệt hồ sơ">Cán bộ duyệt hồ sơ</option><option value="Kế toán">Kế toán</option></select></div>
               <div className="pt-4"><button type="submit" className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl">Lưu thông tin</button></div>
             </form>
@@ -2264,15 +2570,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 <div className="lg:col-span-2 space-y-10">
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
                     <h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">1. Thông tin cá nhân & Liên hệ</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Giới tính" value={selectedSubmission.gender} /><DetailItem label="Ngày sinh" value={selectedSubmission.dob ? new Date(selectedSubmission.dob).toLocaleDateString('vi-VN') : '--'} /><DetailItem label="Nơi sinh" value={selectedSubmission.pob} /><DetailItem label="Dân tộc" value={selectedSubmission.ethnicity} /><DetailItem label="Ngày cấp CCCD" value={selectedSubmission.issueDate ? new Date(selectedSubmission.issueDate).toLocaleDateString('vi-VN') : '--'} /><DetailItem label="Nơi cấp" value={selectedSubmission.issuePlace} colSpan={2} /><DetailItem label="Số điện thoại" value={selectedSubmission.phone} highlight /><DetailItem label="Email" value={selectedSubmission.email} colSpan={2} /><DetailItem label="Họ tên phụ huynh" value={selectedSubmission.parentName} /><DetailItem label="SĐT phụ huynh" value={selectedSubmission.parentPhone} /></div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Giới tính" value={selectedSubmission.gender} /><DetailItem label="Ngày sinh" value={formatDateValue(selectedSubmission.dob) || '--'} /><DetailItem label="Nơi sinh" value={selectedSubmission.pob} /><DetailItem label="Dân tộc" value={selectedSubmission.ethnicity} /><DetailItem label="Ngày cấp CCCD" value={formatDateValue(selectedSubmission.issueDate) || '--'} /><DetailItem label="Nơi cấp" value={selectedSubmission.issuePlace} colSpan={2} /><DetailItem label="Số điện thoại" value={selectedSubmission.phone} highlight /><DetailItem label="Email" value={selectedSubmission.email} colSpan={2} /><DetailItem label="Họ tên phụ huynh" value={selectedSubmission.parentName} /><DetailItem label="SĐT phụ huynh" value={selectedSubmission.parentPhone} /></div>
                   </div>
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">2. Địa chỉ thường trú (VNeID)</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Tỉnh / Thành phố" value={selectedSubmission.province} /><DetailItem label="Quận / Huyện, Xã / Phường" value={selectedSubmission.district} /><DetailItem label="Số nhà, đường, xóm" value={selectedSubmission.addressDetails} /></div></div>
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">3. Thông tin gửi giấy báo kết quả</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Người nhận" value={selectedSubmission.recipient} /><DetailItem label="Địa chỉ nhận" value={selectedSubmission.deliveryAddress} />{selectedSubmission.deliveryAddress === AddressType.OTHER && <DetailItem label="Địa chỉ chi tiết" value={selectedSubmission.deliveryAddressDetails} colSpan={2} />}</div></div>
-                  <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">4. Nguyện vọng & Học vấn</h4><div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Cơ sở nhập học" value={selectedSubmission.campus} highlight /><DetailItem label="Hệ đào tạo" value={selectedSubmission.educationLevel} highlight /><DetailItem label="Năm tốt nghiệp" value={selectedSubmission.gradYear} /><DetailItem label="Trường tốt nghiệp" value={selectedSubmission.gradSchool} /><DetailItem label="Nguyện vọng 1" value={selectedSubmission.choice1Major} colSpan={2} highlight /><DetailItem label="Mã nghề" value={selectedSubmission.choice1Specialty} /><DetailItem label="NV 2" value={selectedSubmission.choice2Major} /></div></div>
+                  <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">4. Nguyện vọng & Học vấn</h4><div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Địa điểm nhập học" value={selectedSubmission.campus} highlight /><DetailItem label="Hệ đào tạo" value={selectedSubmission.educationLevel} highlight /><DetailItem label="Năm tốt nghiệp" value={selectedSubmission.gradYear} /><DetailItem label="Trường tốt nghiệp" value={selectedSubmission.gradSchool} /><DetailItem label="Nguyện vọng 1" value={selectedSubmission.choice1Major} colSpan={2} highlight /><DetailItem label="Mã nghề" value={selectedSubmission.choice1Specialty} /><DetailItem label="NV 2" value={selectedSubmission.choice2Major} /></div></div>
                   <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">5. Bảng điểm học tập (Lớp cuối cấp)</h4><div className="grid grid-cols-5 md:grid-cols-10 gap-2 pt-2">{SUBJECTS.map(sub => (<div key={sub} className="flex flex-col items-center bg-gray-50 rounded-xl p-2 border border-gray-100"><span className="text-[8px] font-black text-gray-400 uppercase mb-1">{sub}</span><span className="text-xs font-black text-blue-900">{selectedSubmission.grades?.[sub] || '-'}</span></div>))}</div></div>
                 </div>
                 <div className="space-y-10">
-                  <div className="bg-blue-900 p-8 rounded-[2rem] shadow-xl space-y-6"><h4 className="text-white font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-300 pl-4">6. Hồ sơ đính kèm</h4><div className="grid grid-cols-1 gap-6"><FilePreviewItem label="Mặt trước CCCD" src={selectedSubmission.frontId} /><FilePreviewItem label="Mặt sau CCCD" src={selectedSubmission.backId} /><FilePreviewItem label="Bằng tốt nghiệp / Chứng nhận" src={selectedSubmission.diploma} /><FilePreviewItem label="Học bạ học tập" src={selectedSubmission.tempCert} /></div></div>
+                  <div className="bg-blue-900 p-8 rounded-[2rem] shadow-xl space-y-6"><h4 className="text-white font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-300 pl-4">6. Hồ sơ đính kèm</h4><div className="grid grid-cols-1 gap-6"><FilePreviewItem label="Mặt trước CCCD" src={selectedSubmission.frontId} /><FilePreviewItem label="Mặt sau CCCD" src={selectedSubmission.backId} /><FilePreviewItem label="Căn cước điện tử" src={selectedSubmission.electronicId} /><FilePreviewItem label="Bằng tốt nghiệp / Chứng nhận" src={selectedSubmission.diploma} /><FilePreviewItem label="Học bạ học tập" src={selectedSubmission.tempCert} /></div></div>
                   <div className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100 flex flex-col items-center text-center gap-3"><div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><div><p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kiểm soát viên</p><p className="text-xs text-emerald-800 font-bold mt-1">Hồ sơ đầy đủ & hợp lệ</p></div></div>
                 </div>
               </div>

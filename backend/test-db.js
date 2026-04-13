@@ -4,10 +4,10 @@ const { Client } = require('pg');
 async function checkDb() {
     const client = new Client({
         host: '127.0.0.1',
-        port: 5432,
-        database: 'tuyensinh',
-        user: 'postgres',
-        password: '123456',
+        port: 5435,
+        database: 'tuyensinh_db',
+        user: 'tuyensinh',
+        password: 'tuyensinh_password',
     });
 
     try {

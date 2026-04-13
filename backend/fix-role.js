@@ -1,0 +1,10 @@
+const fs = require('fs');
+const path = 'd:/Github/tuyensinh/fontend/components/AdminDashboard.tsx';
+let content = fs.readFileSync(path, 'utf8');
+const old = `if (user?.role !== 'Quản trị viên') {`;
+const newStr = `if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {`;
+const count = (content.match(new RegExp(old.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+console.log(`Found ${count} occurrences`);
+content = content.replace(new RegExp(old.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), newStr);
+fs.writeFileSync(path, content, 'utf8');
+console.log('Done.');

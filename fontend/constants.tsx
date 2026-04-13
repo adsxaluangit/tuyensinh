@@ -19,6 +19,9 @@ export const CAMPUSES = [
 export const EDUCATION_LEVELS = [
   'Cao đẳng',
   'Trung cấp',
+  'Sơ cấp',
+  'Liên thông Cao đẳng',
+  'Liên thông Trung cấp',
   '9+'
 ];
 

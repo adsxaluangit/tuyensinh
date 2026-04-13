@@ -30,6 +30,10 @@ const App: React.FC = () => {
   const [password, setPassword] = useState('');
   const [studentIdInput, setStudentIdInput] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [parentPhoneError, setParentPhoneError] = useState('');
+  const [issueDateError, setIssueDateError] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(() => {
     const saved = localStorage.getItem('tuyensinh_user');
@@ -55,8 +59,8 @@ const App: React.FC = () => {
 
   // Master Data from Settings
   const [masterOccupations, setMasterOccupations] = useState<OccupationConfig[]>([]);
-  const [availableCampuses, setAvailableCampuses] = useState<{ id: string, name: string }[]>([]);
-  const [availableLevels, setAvailableLevels] = useState<{ id: string, name: string }[]>([]);
+  const [availableCampuses, setAvailableCampuses] = useState<{ id: string, numericId: number, name: string }[]>([]);
+  const [availableLevels, setAvailableLevels] = useState<{ id: string, numericId: number, name: string }[]>([]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -98,11 +102,13 @@ const App: React.FC = () => {
   const [files, setFiles] = useState<{
     frontId: string | null;
     backId: string | null;
+    electronicId: string | null;
     diploma: string | null;
     tempCert: string | null;
   }>({
     frontId: null,
     backId: null,
+    electronicId: null,
     diploma: null,
     tempCert: null
   });
@@ -116,10 +122,10 @@ const App: React.FC = () => {
     const fetchData = async () => {
       try {
         const campusesData = await api.fetchCampuses();
-        setAvailableCampuses(campusesData.map((c: any) => ({ id: c.documentId, name: c.name })));
+        setAvailableCampuses(campusesData.map((c: any) => ({ id: c.documentId, numericId: c.id, name: c.name })));
 
         const levelsData = await api.fetchEducationLevels();
-        setAvailableLevels(levelsData.map((l: any) => ({ id: l.documentId, name: l.name })));
+        setAvailableLevels(levelsData.map((l: any) => ({ id: l.documentId, numericId: l.id, name: l.name })));
 
         const occupationsData = await api.fetchOccupations();
         setMasterOccupations(occupationsData.map((o: any) => ({
@@ -139,17 +145,22 @@ const App: React.FC = () => {
 
   const getFilteredOccupations = (campus: string, level: string) => {
     if (!campus || !level) return [];
-    // Ưu tiên lọc theo cả cơ sở và hệ
-    const filtered = masterOccupations.filter(occ => occ.campus === campus && occ.educationLevel === level);
-    // Nếu không có cấu hình cụ thể cho hệ đó, hiển thị theo cơ sở
-    return filtered.length > 0 ? filtered : masterOccupations.filter(occ => occ.campus === campus);
+    // Lọc CHÍNH XÁC theo cả cơ sở VÀ hệ đào tạo - không fallback
+    return masterOccupations.filter(occ => occ.campus === campus && occ.educationLevel === level);
   };
 
   const choice1Occupations = getFilteredOccupations(formData.campus, formData.educationLevel);
   const choice2Occupations = getFilteredOccupations(formData.campus, formData.educationLevel);
+  const noOccupationsWarning = formData.campus && formData.educationLevel && choice1Occupations.length === 0;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (phoneError || parentPhoneError || emailError || issueDateError) {
+      alert('Vui lòng kiểm tra lại và sửa các lỗi nhập liệu (chữ đỏ) trước khi nộp hồ sơ.');
+      return;
+    }
+
     const selectedOcc = masterOccupations.find(occ => occ.name === formData.choice1Major && occ.code === formData.choice1Specialty);
 
     // Lấy thông tin cấu hình từ Strapi (mặc định lấy bản ghi đầu tiên)
@@ -165,7 +176,7 @@ const App: React.FC = () => {
     const levelObj = availableLevels.find(l => l.name === formData.educationLevel);
 
     // Validate required files
-    if (!files.frontId || !files.backId || !files.diploma || !files.tempCert) {
+    if (!files.frontId || !files.backId || !files.diploma || !files.tempCert || !files.electronicId) {
       alert('Vui lòng tải lên đầy đủ các giấy tờ xác thực bắt buộc (*)');
       return;
     }
@@ -192,8 +203,8 @@ const App: React.FC = () => {
       isHealthSelected: true,
       isComprehensiveSelected: true,
       isUniformSelected: true,
-      campus: campusObj?.id,
-      educationLevel: levelObj?.id,
+      campus: campusObj?.numericId,
+      educationLevel: levelObj?.numericId,
       grades: grades // Ensure grades is explicitly included
     });
 
@@ -220,28 +231,32 @@ const App: React.FC = () => {
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const staffs = await api.fetchStaffs();
-      const foundUser = staffs.find((u: any) => u.username === username && u.password === password && u.status === 'Hoạt động');
+      // 1. Hardcoded emergency admin check (optional but currently in your code)
+      if (username === 'admin' && password === 'admin123') {
+        setCurrentUser({ id: '0', fullName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString() });
+        setView('admin');
+        return;
+      }
 
-      if (foundUser) {
+      // 2. Secure server-side login
+      const response = await api.loginStaff(username, password);
+
+      if (response && response.data) {
+        const foundUser = response.data;
         setCurrentUser({
           ...foundUser,
           id: foundUser.documentId || foundUser.id
         });
         setView('admin');
-      } else if (username === 'admin' && password === 'admin123') {
-        setCurrentUser({ id: '0', fullName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString() });
-        setView('admin');
       } else {
         setLoginError('Tên đăng nhập hoặc mật khẩu không chính xác (hoặc tài khoản đã bị khóa)');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login error:", error);
-      if (username === 'admin' && password === 'admin123') {
-        setCurrentUser({ id: '0', fullName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString() });
-        setView('admin');
+      if (error.message?.includes('401')) {
+        setLoginError('Tên đăng nhập hoặc mật khẩu không chính xác');
       } else {
-        setLoginError('Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+        setLoginError('Lỗi kết nối máy chủ hoặc tài khoản không tồn tại.');
       }
     }
   };
@@ -262,6 +277,7 @@ const App: React.FC = () => {
           setFiles({
             frontId: record.frontId || null,
             backId: record.backId || null,
+            electronicId: record.electronicId || null,
             diploma: record.diploma || null,
             tempCert: record.tempCert || null,
           });
@@ -339,7 +355,28 @@ const App: React.FC = () => {
                 <input type="text" required placeholder="Nhập họ và tên" className={inputClasses} value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
               </InputGroup>
               <InputGroup label="Ngày sinh" required>
-                <DateSelector required value={formData.dob} onChange={(val) => setFormData({ ...formData, dob: val })} />
+                <DateSelector
+                  required
+                  value={formData.dob}
+                  onChange={(val) => {
+                    if (val) {
+                      const birthDate = new Date(val);
+                      const today = new Date();
+                      let age = today.getFullYear() - birthDate.getFullYear();
+                      const m = today.getMonth() - birthDate.getMonth();
+                      if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
+                      }
+
+                      if (age < 15) {
+                        alert("Bạn không đủ tuổi để nhập học (Yêu cầu từ 15 tuổi trở lên)");
+                        setFormData({ ...formData, dob: '' });
+                        return;
+                      }
+                    }
+                    setFormData({ ...formData, dob: val });
+                  }}
+                />
               </InputGroup>
               <InputGroup label="Nơi sinh" required>
                 <select className={selectClasses} required value={formData.pob} onChange={(e) => setFormData({ ...formData, pob: e.target.value })}>
@@ -359,28 +396,56 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <InputGroup label="Số CCCD/CMND" required>
-                <input 
-                  type="text" 
-                  pattern="\d{12}" 
-                  minLength={12} 
-                  maxLength={12} 
-                  title="Vui lòng nhập chính xác 12 chữ số" 
-                  required 
-                  placeholder="Số định danh 12 số" 
-                  className={inputClasses} 
-                  disabled={isEditing} 
-                  value={formData.idNumber} 
+                <input
+                  type="text"
+                  pattern="\d{12}"
+                  minLength={12}
+                  maxLength={12}
+                  title="Vui lòng nhập chính xác 12 chữ số"
+                  required
+                  placeholder="Số định danh 12 số"
+                  className={inputClasses}
+                  disabled={isEditing}
+                  value={formData.idNumber}
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 12);
                     setFormData({ ...formData, idNumber: val });
-                  }} 
+                  }}
                 />
               </InputGroup>
               <InputGroup label="Dân tộc" required>
                 <input type="text" required placeholder="Dân tộc" className={inputClasses} value={formData.ethnicity} onChange={(e) => setFormData({ ...formData, ethnicity: e.target.value })} />
               </InputGroup>
               <InputGroup label="Ngày cấp" required>
-                <DateSelector required value={formData.issueDate} onChange={(val) => setFormData({ ...formData, issueDate: val })} />
+                <div className="flex flex-col gap-1 w-full">
+                  <div className={`transition-all ${issueDateError ? 'rounded-[0.9rem] ring-2 ring-red-500/30 ring-offset-1 p-[1px]' : ''}`}>
+                    <DateSelector
+                      required
+                      value={formData.issueDate}
+                      onChange={(val) => {
+                        if (val) {
+                          const issueDate = new Date(val);
+                          const today = new Date();
+                          issueDate.setHours(0, 0, 0, 0);
+                          today.setHours(0, 0, 0, 0);
+                          if (issueDate.getTime() > today.getTime()) {
+                            setIssueDateError('Ngày cấp không được vượt quá ngày hiện tại');
+                          } else {
+                            setIssueDateError('');
+                          }
+                        } else {
+                          setIssueDateError('');
+                        }
+                        setFormData({ ...formData, issueDate: val });
+                      }}
+                    />
+                  </div>
+                  {issueDateError && (
+                    <p className="text-red-500 text-[10px] font-bold mt-1 px-1 flex items-center gap-1">
+                      <span>⚠</span> {issueDateError}
+                    </p>
+                  )}
+                </div>
               </InputGroup>
               <InputGroup label="Nơi cấp" required>
                 <input type="text" required className={inputClasses} value={formData.issuePlace} onChange={(e) => setFormData({ ...formData, issuePlace: e.target.value })} />
@@ -404,16 +469,107 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <InputGroup label="Số điện thoại" required>
-                <input type="tel" required placeholder="Số điện thoại cá nhân" className={inputClasses} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                <input
+                  type="tel"
+                  required
+                  pattern="\d{10}"
+                  minLength={10}
+                  maxLength={10}
+                  title="Vui lòng nhập chính xác 10 chữ số"
+                  placeholder="Số điện thoại cá nhân"
+                  className={`${inputClasses} ${phoneError ? 'border-red-500 focus:ring-red-500/10' : ''}`}
+                  value={formData.phone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, phone: val });
+                    if (val && val.length < 10) {
+                      setPhoneError('Vui lòng nhập đủ 10 chữ số');
+                    } else {
+                      setPhoneError('');
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && val.length < 10) {
+                      setPhoneError('Vui lòng nhập đủ 10 chữ số');
+                    } else {
+                      setPhoneError('');
+                    }
+                  }}
+                />
+                {phoneError && (
+                  <p className="text-red-500 text-[11px] font-bold mt-1 px-1 flex items-center gap-1">
+                    <span>⚠</span> {phoneError}
+                  </p>
+                )}
               </InputGroup>
               <InputGroup label="Email" required>
-                <input type="email" required placeholder="Địa chỉ email liên hệ" className={inputClasses} value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                <input
+                  type="email"
+                  required
+                  placeholder="Địa chỉ email liên hệ"
+                  className={`${inputClasses} ${emailError ? 'border-red-500 focus:ring-red-500/10' : ''}`}
+                  value={formData.email}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({ ...formData, email: val });
+                    if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                      setEmailError('Email không đúng định dạng (vd: example@gmail.com)');
+                    } else {
+                      setEmailError('');
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) {
+                      setEmailError('Email không đúng định dạng (vd: example@gmail.com)');
+                    } else {
+                      setEmailError('');
+                    }
+                  }}
+                />
+                {emailError && (
+                  <p className="text-red-500 text-[11px] font-bold mt-1 px-1 flex items-center gap-1">
+                    <span>⚠</span> {emailError}
+                  </p>
+                )}
               </InputGroup>
               <InputGroup label="Phụ huynh/Bảo trợ">
                 <input type="text" placeholder="Họ tên phụ huynh" className={inputClasses} value={formData.parentName} onChange={(e) => setFormData({ ...formData, parentName: e.target.value })} />
               </InputGroup>
               <InputGroup label="SĐT Phụ huynh">
-                <input type="tel" placeholder="Số điện thoại phụ huynh" className={inputClasses} value={formData.parentPhone} onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })} />
+                <input
+                  type="tel"
+                  pattern="\d{10}"
+                  minLength={10}
+                  maxLength={10}
+                  title="Vui lòng nhập chính xác 10 chữ số"
+                  placeholder="Số điện thoại phụ huynh"
+                  className={`${inputClasses} ${parentPhoneError ? 'border-red-500 focus:ring-red-500/10' : ''}`}
+                  value={formData.parentPhone}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                    setFormData({ ...formData, parentPhone: val });
+                    if (val && val.length < 10) {
+                      setParentPhoneError('Vui lòng nhập đủ 10 chữ số');
+                    } else {
+                      setParentPhoneError('');
+                    }
+                  }}
+                  onBlur={(e) => {
+                    const val = e.target.value;
+                    if (val && val.length < 10) {
+                      setParentPhoneError('Vui lòng nhập đủ 10 chữ số');
+                    } else {
+                      setParentPhoneError('');
+                    }
+                  }}
+                />
+                {parentPhoneError && (
+                  <p className="text-red-500 text-[11px] font-bold mt-1 px-1 flex items-center gap-1">
+                    <span>⚠</span> {parentPhoneError}
+                  </p>
+                )}
               </InputGroup>
             </div>
           </FormSection>
@@ -421,9 +577,9 @@ const App: React.FC = () => {
           {/* Phần này đồng bộ dữ liệu Cơ sở và Hệ từ Cấu hình hệ thống */}
           <FormSection title="THÔNG TIN ĐĂNG KÝ TRƯỜNG CAO HÀNG HẢI VÀ ĐƯỜNG THỦY I">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <InputGroup label="Cơ sở nhập học" required>
+              <InputGroup label="Địa điểm nhập học" required>
                 <select className={selectClasses} required value={formData.campus} onChange={(e) => setFormData({ ...formData, campus: e.target.value, choice1Major: '', choice1Specialty: '' })}>
-                  <option value="">-- Chọn cơ sở --</option>
+                  <option value="">-- Chọn địa điểm --</option>
                   {availableCampuses.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                 </select>
               </InputGroup>
@@ -441,16 +597,22 @@ const App: React.FC = () => {
                 <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest opacity-60">Nguyện vọng thứ nhất</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <InputGroup label="Nghề đào tạo" required className="col-span-2">
-                    <select className={selectClasses} required value={formData.choice1Major} onChange={(e) => {
-                      const name = e.target.value;
-                      const occ = choice1Occupations.find(o => o.name === name);
-                      setFormData({ ...formData, choice1Major: name, choice1Specialty: occ?.code || '' })
-                    }}>
-                      <option value="">-- Chọn nghề --</option>
-                      {Array.from(new Set(choice1Occupations.map(o => o.name))).map(name => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
+                    {noOccupationsWarning ? (
+                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold">
+                        ⚠ Chưa có nghề đào tạo cho hệ "{formData.educationLevel}" tại "{formData.campus}"
+                      </div>
+                    ) : (
+                      <select className={selectClasses} required value={formData.choice1Major} onChange={(e) => {
+                        const name = e.target.value;
+                        const occ = choice1Occupations.find(o => o.name === name);
+                        setFormData({ ...formData, choice1Major: name, choice1Specialty: occ?.code || '' })
+                      }}>
+                        <option value="">-- Chọn nghề --</option>
+                        {Array.from(new Set(choice1Occupations.map(o => o.name))).map(name => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    )}
                   </InputGroup>
                   <InputGroup label="Mã nghề" required>
                     <input readOnly className={`${inputClasses} bg-gray-50 border-gray-200 cursor-not-allowed`} value={formData.choice1Specialty} placeholder="Mã nghề tự động" />
@@ -462,16 +624,22 @@ const App: React.FC = () => {
                 <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest opacity-60">Nguyện vọng thứ hai</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <InputGroup label="Nghề đào tạo" className="col-span-2">
-                    <select className={selectClasses} value={formData.choice2Major} onChange={(e) => {
-                      const name = e.target.value;
-                      const occ = choice2Occupations.find(o => o.name === name);
-                      setFormData({ ...formData, choice2Major: name, choice2Specialty: occ?.code || '' })
-                    }}>
-                      <option value="">-- Chọn nghề --</option>
-                      {Array.from(new Set(choice2Occupations.map(o => o.name))).map(name => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
+                    {noOccupationsWarning ? (
+                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold">
+                        ⚠ Chưa có nghề đào tạo
+                      </div>
+                    ) : (
+                      <select className={selectClasses} value={formData.choice2Major} onChange={(e) => {
+                        const name = e.target.value;
+                        const occ = choice2Occupations.find(o => o.name === name);
+                        setFormData({ ...formData, choice2Major: name, choice2Specialty: occ?.code || '' })
+                      }}>
+                        <option value="">-- Chọn nghề --</option>
+                        {Array.from(new Set(choice2Occupations.map(o => o.name))).map(name => (
+                          <option key={name} value={name}>{name}</option>
+                        ))}
+                      </select>
+                    )}
                   </InputGroup>
                   <InputGroup label="Mã nghề">
                     <input readOnly className={`${inputClasses} bg-gray-50 border-gray-200 cursor-not-allowed`} value={formData.choice2Specialty} placeholder="Mã nghề tự động" />
@@ -494,11 +662,20 @@ const App: React.FC = () => {
               <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
                 {SUBJECTS.map((sub) => (
                   <div key={sub} className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold text-gray-500 text-center uppercase">{sub}</label>
-                    <input type="text" placeholder="-" className="w-full bg-blue-50/20 border-2 border-blue-500/10 rounded-xl px-2 py-2 text-sm text-center font-bold text-blue-900 focus:border-blue-500 outline-none transition-all shadow-sm" value={grades[sub]} onChange={(e) => setGrades({ ...grades, [sub]: e.target.value })} />
+                    <label className="text-[10px] font-bold text-gray-500 text-center uppercase">{sub} <span className="text-red-500">*</span></label>
+                    <input type="text" required placeholder="-" className="w-full bg-blue-50/20 border-2 border-blue-500/10 rounded-xl px-2 py-2 text-sm text-center font-bold text-blue-900 focus:border-blue-500 outline-none transition-all shadow-sm" value={grades[sub]} onChange={(e) => {
+                      let val = e.target.value.replace(/[^0-9.]/g, '');
+                      const parts = val.split('.');
+                      if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                      if (val !== '' && parseFloat(val) > 10) val = '10';
+                      setGrades({ ...grades, [sub]: val });
+                    }} />
                   </div>
                 ))}
               </div>
+              <p className="text-[11px] text-red-600 font-bold italic mt-4 text-center">
+                * Ghi chú: Các môn không thuộc phân ban đã học thì điền số "0"
+              </p>
             </div>
           </FormSection>
 
@@ -538,10 +715,11 @@ const App: React.FC = () => {
           </FormSection>
 
           <FormSection title="TẢI LÊN GIẤY TỜ XÁC THỰC">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-10">
               <FileUpload label="CCCD mặt trước" required placeholderImage={files.frontId || "/assets/cccd_front.png"} onFileChange={(b64) => setFiles({ ...files, frontId: b64 })} />
               <FileUpload label="CCCD mặt sau" required placeholderImage={files.backId || "/assets/cccd_back.png"} onFileChange={(b64) => setFiles({ ...files, backId: b64 })} />
-              <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "/assets/diploma.png"} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
+              <FileUpload label="Căn cước Điện tử" required placeholderImage={files.electronicId || "/assets/cccd_front.png"} helperText="Hướng dẫn: Vào VNeID > Thẻ căn cước > Căn cước điện tử > Chụp ảnh màn hình" onFileChange={(b64) => setFiles({ ...files, electronicId: b64 })} />
+              <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "/assets/diploma.png"} helperText={`- Liên thông Cao đẳng: nộp bổ sung bằng Trung cấp\n- Liên thông Trung cấp: nộp bổ sung bằng Sơ cấp`} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
               <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "/assets/transcript.png"} onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
             </div>
           </FormSection>
@@ -556,10 +734,13 @@ const App: React.FC = () => {
                 <input type="checkbox" id="consent" required className="mt-1 w-6 h-6 text-blue-600 border-2 border-blue-500 rounded-lg cursor-pointer" checked={confirmations.dataConsent} onChange={(e) => setConfirmations({ ...confirmations, dataConsent: e.target.checked })} />
                 <label htmlFor="consent" className="text-xs text-gray-700 leading-relaxed font-semibold cursor-pointer">Tôi đồng ý cung cấp thông tin cá nhân cho nhà trường để phục vụ mục đích xét tuyển và nhập học theo quy định của pháp luật.</label>
               </div>
-              <div className="flex justify-center pt-10">
+              <div className="flex flex-col items-center pt-10 gap-4">
                 <button type="submit" disabled={!confirmations.truth || !confirmations.dataConsent} className={`px-20 py-5 rounded-[1.5rem] font-black text-white uppercase tracking-[0.2em] transition-all shadow-2xl ${confirmations.truth && confirmations.dataConsent ? 'bg-[#cc0000] hover:bg-red-700 hover:scale-105 active:scale-95' : 'bg-gray-300 cursor-not-allowed opacity-50'}`}>
                   {isEditing ? 'CẬP NHẬT HỒ SƠ' : 'GỬI HỒ SƠ ĐĂNG KÝ'}
                 </button>
+                <p className="text-xs font-black text-gray-500 uppercase tracking-widest mt-2">
+                  Mọi thắc mắc liên hệ: <span className="text-red-600">0981.344.488 - 0987.493.486</span>
+                </p>
               </div>
             </div>
           </FormSection>

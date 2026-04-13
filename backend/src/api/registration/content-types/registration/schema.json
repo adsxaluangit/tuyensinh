@@ -184,6 +184,9 @@
         "backId": {
             "type": "text"
         },
+        "electronicId": {
+            "type": "text"
+        },
         "diploma": {
             "type": "text"
         },
@@ -198,6 +201,9 @@
         },
         "syncAmounts": {
             "type": "boolean"
+        },
+        "admissionNoticePdf": {
+            "type": "text"
         }
     }
 }

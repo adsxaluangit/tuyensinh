@@ -86,6 +86,7 @@ export interface FormData {
   files: {
     frontId: string | null;
     backId: string | null;
+    electronicId: string | null;
     diploma: string | null;
     tempCert: string | null;
   };
