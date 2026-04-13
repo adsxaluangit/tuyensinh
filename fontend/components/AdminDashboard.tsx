@@ -213,6 +213,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     user?.role === 'Kế toán' ? 'tuition' : 'submissions'
   );
   const [tuitionPagination, setTuitionPagination] = useState({ page: 1, pageSize: 25 });
+  const [tuitionTotalCount, setTuitionTotalCount] = useState(0);
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
   const [admissionSubTab, setAdmissionSubTab] = useState<'Hải Phòng' | 'Nam Đồng' | 'Đinh Nhu' | 'Thu học phí'>('Hải Phòng');
   const [isLoading, setIsLoading] = useState(false);
@@ -472,8 +473,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const fetchTuitionData = async () => {
     setIsTuitionLoading(true);
     try {
-      const response = await api.fetchAllApprovedRegistrations();
-      const regData: any[] = Array.isArray((response as any).data) ? (response as any).data : (Array.isArray(response) ? (response as any[]) : []);
+      const response: any = await api.fetchAllApprovedRegistrations({
+        page: tuitionPagination.page,
+        pageSize: tuitionPagination.pageSize,
+        searchTerm
+      });
+      const regData: any[] = Array.isArray(response.data) ? response.data : (Array.isArray(response) ? response : []);
       setTuitionSubmissions(regData.map((r: any) => ({
         ...r,
         id: r.idNumber,
@@ -481,6 +486,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         campus: r.campus?.name || r.campus,
         educationLevel: r.educationLevel?.name || r.educationLevel
       })));
+      if (response.meta && response.meta.pagination) {
+        setTuitionTotalCount(response.meta.pagination.total);
+      }
     } catch (error) {
       console.error("Lỗi khi tải danh sách học phí:", error);
     } finally {
@@ -492,7 +500,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     if (activeTab === 'tuition') {
       fetchTuitionData();
     }
-  }, [activeTab]);
+  }, [activeTab, tuitionPagination.page, tuitionPagination.pageSize, searchTerm]);
 
   const handleViewDetail = async (submission: any) => {
     try {
@@ -1037,24 +1045,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   }, [submissions, searchTerm, filterCampus, filterLevel, filterMajor, user?.role, user?.campus]);
 
   const approvedSubmissions = React.useMemo(() => {
-    const searchLower = searchTerm.toLowerCase();
-    return tuitionSubmissions
-      .filter(s => {
-        if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {
-          if (!user?.campus || s.campus !== user.campus) return false;
-        }
-        return s.fullName.toLowerCase().includes(searchLower) ||
-          s.phone.includes(searchTerm) ||
-          s.idNumber.includes(searchTerm);
-      })
-      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
-  }, [tuitionSubmissions, searchTerm, user?.role, user?.campus]);
+    return tuitionSubmissions.filter(s => {
+      if (user?.role !== 'Quản trị viên' && user?.role !== 'Kế toán') {
+        if (!user?.campus || s.campus !== user.campus) return false;
+      }
+      return true;
+    });
+  }, [tuitionSubmissions, user?.role, user?.campus]);
 
   const paginatedTuitionSubmissions = React.useMemo(() => {
-    const startIndex = (tuitionPagination.page - 1) * tuitionPagination.pageSize;
-    const endIndex = startIndex + tuitionPagination.pageSize;
-    return approvedSubmissions.slice(startIndex, endIndex);
-  }, [approvedSubmissions, tuitionPagination.page, tuitionPagination.pageSize]);
+    return approvedSubmissions;
+  }, [approvedSubmissions]);
 
   // Reset tuition pagination to page 1 when search term changes
   useEffect(() => {
@@ -1483,13 +1484,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   };
 
   const handleSyncTuitionFromConfig = async () => {
-    if (approvedSubmissions.length === 0) return alert('Không có dữ liệu trúng tuyển!');
-    if (!window.confirm(`Bạn có chắc muốn đồng bộ lại học phí và bảo hiểm cho ${approvedSubmissions.length} thí sinh từ cấu hình hệ thống?`)) return;
+    if (paginatedTuitionSubmissions.length === 0) return alert('Không có dữ liệu trúng tuyển trên trang này!');
+    if (!window.confirm(`Bạn có chắc muốn đồng bộ lại học phí và bảo hiểm cho ${paginatedTuitionSubmissions.length} thí sinh trên trang này từ hệ thống?`)) return;
 
     setIsLoading(true);
     let successCount = 0;
     try {
-      for (const sub of approvedSubmissions) {
+      for (const sub of paginatedTuitionSubmissions) {
         if (sub.docId) {
           await api.updateRegistration(sub.docId, { syncAmounts: true });
           successCount++;
@@ -2055,7 +2056,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </div>
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
-              <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[120px]"><span className="text-[10px] text-emerald-600 font-extrabold uppercase block mb-0.5">Trúng tuyển</span><span className="text-xl font-black text-emerald-900">{approvedSubmissions.length}</span></div>
+              <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[120px]"><span className="text-[10px] text-emerald-600 font-extrabold uppercase block mb-0.5">Trúng tuyển</span><span className="text-xl font-black text-emerald-900">{tuitionTotalCount}</span></div>
               <button
                 onClick={handleSyncTuitionFromConfig}
                 className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
@@ -2077,7 +2078,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 <tbody className="divide-y divide-gray-100 text-sm">
                   {isTuitionLoading ? (
                     <tr><td colSpan={12} className="px-6 py-10 text-center text-blue-600 font-bold italic animate-pulse">Đang nạp toàn bộ danh sách trúng tuyển...</td></tr>
-                  ) : approvedSubmissions.length === 0 ? (
+                  ) : tuitionTotalCount === 0 ? (
                     <tr><td colSpan={12} className="px-6 py-10 text-center text-gray-400 italic font-medium bg-gray-50/20">Chưa có thí sinh trúng tuyển nào trong danh sách lọc hiện tại.</td></tr>
                   ) : (
                     paginatedTuitionSubmissions.map(s => {
@@ -2152,7 +2153,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               {/* Tuition Pagination Controls */}
               <div className="bg-gray-50 px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-xs font-bold text-gray-500 uppercase tracking-widest">
-                  Hiển thị {(tuitionPagination.page - 1) * tuitionPagination.pageSize + 1} - {Math.min(tuitionPagination.page * tuitionPagination.pageSize, approvedSubmissions.length)} / {approvedSubmissions.length} hồ sơ trúng tuyển
+                  Hiển thị {(tuitionPagination.page - 1) * tuitionPagination.pageSize + 1} - {Math.min(tuitionPagination.page * tuitionPagination.pageSize, tuitionTotalCount)} / {tuitionTotalCount} hồ sơ trúng tuyển
                 </div>
                 <div className="flex items-center gap-2">
                   <button
@@ -2163,10 +2164,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                   </button>
                   <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-emerald-900 text-xs font-black">
-                    Trang {tuitionPagination.page} / {Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize) || 1}
+                    Trang {tuitionPagination.page} / {Math.ceil(tuitionTotalCount / tuitionPagination.pageSize) || 1}
                   </div>
                   <button
-                    disabled={tuitionPagination.page >= Math.ceil(approvedSubmissions.length / tuitionPagination.pageSize)}
+                    disabled={tuitionPagination.page >= Math.ceil(tuitionTotalCount / tuitionPagination.pageSize)}
                     onClick={() => setTuitionPagination(prev => ({ ...prev, page: prev.page + 1 }))}
                     className="p-2 rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                   >

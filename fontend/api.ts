@@ -192,8 +192,12 @@ export const fetchAllRegistrations = async (params: {
     return await fetchAPI(url);
 };
 
-export const fetchAllApprovedRegistrations = async () => {
-    const PAGE_SIZE = 1000; // an toàn dưới maxLimit=12000
+export const fetchAllApprovedRegistrations = async (params: { 
+    page?: number, 
+    pageSize?: number, 
+    searchTerm?: string 
+} = {}) => {
+    const { page = 1, pageSize = 25, searchTerm } = params;
     const fieldNames = [
         'fullName', 'dob', 'pob', 'gender', 'ethnicity', 'idNumber', 'issueDate', 'issuePlace',
         'phone', 'email', 'addressDetails', 'province', 'district',
@@ -208,25 +212,13 @@ export const fetchAllApprovedRegistrations = async () => {
     const fieldStr = fieldNames.map((f, i) => `&fields[${i}]=${f}`).join('') +
         '&populate[campus][fields][0]=name&populate[educationLevel][fields][0]=name';
 
-    const baseUrl = `api/registrations?pagination[pageSize]=${PAGE_SIZE}&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc${fieldStr}`;
+    let baseUrl = `api/registrations?pagination[page]=${page}&pagination[pageSize]=${pageSize}&filters[status][$eq]=Trúng tuyển&sort[0]=createdAt:desc${fieldStr}`;
 
-    // Lấy trang đầu để biết tổng số hồ sơ trúng tuyển
-    const firstPage = await fetchAPI(baseUrl + `&pagination[page]=1`);
-    const allData = [...firstPage.data];
-    const total = firstPage.meta?.pagination?.total || 0;
-    const totalPages = Math.ceil(total / PAGE_SIZE);
-
-    // Lấy các trang còn lại song song
-    if (totalPages > 1) {
-        const promises = [];
-        for (let page = 2; page <= totalPages; page++) {
-            promises.push(fetchAPI(baseUrl + `&pagination[page]=${page}`));
-        }
-        const results = await Promise.all(promises);
-        results.forEach(r => allData.push(...r.data));
+    if (searchTerm) {
+        baseUrl += `&filters[$or][0][fullName][$contains]=${searchTerm}&filters[$or][1][phone][$contains]=${searchTerm}&filters[$or][2][idNumber][$contains]=${searchTerm}`;
     }
 
-    return { data: allData } as { data: any[] };
+    return await fetchAPI(baseUrl);
 };
 
 
