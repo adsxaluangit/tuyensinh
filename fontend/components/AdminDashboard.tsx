@@ -1392,6 +1392,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     const template = admissionTemplates['Thu học phí'];
+    // Lấy địa chỉ đúng theo cơ sở học viên đăng ký (giống giấy báo)
+    const campusTemplate = getTemplateForSubmission((s as any).campus);
+    const campusLocation = campusTemplate?.location || template.location;
     const now = new Date();
     const formattedDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
     const docNumber = `BK-${Math.floor(Math.random() * 900000 + 100000)}`;
@@ -1407,7 +1410,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         <div class="header">
           <div class="school-info">
             <div class="school-name">${template.announcer}</div>
-            <div class="school-addr">Địa chỉ: ${template.location}</div>
+            <div class="school-addr">Địa chỉ: ${campusLocation}</div>
           </div>
           <div class="doc-info">
             <div>Số hiệu: ${docNumber}</div>
