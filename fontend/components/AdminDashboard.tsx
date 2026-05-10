@@ -1307,10 +1307,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     }
   };
 
+  // Lấy đúng mẫu giấy báo theo cơ sở đăng ký của học viên.
+  // So sánh từ khóa trong tên campus (VD: "Đinh Nhu" → mẫu Đinh Nhu)
+  const getTemplateForSubmission = (campusName: string): AdmissionTemplate => {
+    if (!campusName) return admissionTemplates['Hải Phòng'];
+
+    // 1. Tìm exact match trước
+    if (admissionTemplates[campusName]) return admissionTemplates[campusName];
+
+    // 2. Tìm theo từ khóa trong tên campus (bỏ qua hoa/thường)
+    const lowerCampus = campusName.toLowerCase();
+    const CAMPUS_KEYWORDS: { keyword: string; templateKey: string }[] = [
+      { keyword: 'đinh nhu', templateKey: 'Đinh Nhu' },
+      { keyword: 'nam đồng', templateKey: 'Nam Đồng' },
+      { keyword: 'hải phòng', templateKey: 'Hải Phòng' },
+    ];
+    for (const { keyword, templateKey } of CAMPUS_KEYWORDS) {
+      if (lowerCampus.includes(keyword) && admissionTemplates[templateKey]) {
+        return admissionTemplates[templateKey];
+      }
+    }
+
+    // 3. Fallback về Hải Phòng
+    return admissionTemplates['Hải Phòng'];
+  };
+
   const handlePrintSubmission = async () => {
     if (!selectedSubmission) return;
     let currentSeq = selectedSubmission.docSeq;
-    const template = admissionTemplates[selectedSubmission.campus] || admissionTemplates['Hải Phòng'];
+    const template = getTemplateForSubmission(selectedSubmission.campus);
 
     // Generate PDF for email attachment
     let pdfBase64 = null;
@@ -1367,6 +1392,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     const template = admissionTemplates['Thu học phí'];
+    // Lấy địa chỉ đúng theo cơ sở học viên đăng ký (giống giấy báo)
+    const campusTemplate = getTemplateForSubmission((s as any).campus);
+    const campusLocation = campusTemplate?.location || template.location;
     const now = new Date();
     const formattedDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
     const docNumber = `BK-${Math.floor(Math.random() * 900000 + 100000)}`;
@@ -1382,7 +1410,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         <div class="header">
           <div class="school-info">
             <div class="school-name">${template.announcer}</div>
-            <div class="school-addr">Địa chỉ: ${template.location}</div>
+            <div class="school-addr">Địa chỉ: ${campusLocation}</div>
           </div>
           <div class="doc-info">
             <div>Số hiệu: ${docNumber}</div>
