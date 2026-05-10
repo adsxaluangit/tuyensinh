@@ -1307,10 +1307,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     }
   };
 
+  // Lấy đúng mẫu giấy báo theo cơ sở đăng ký của học viên.
+  // So sánh từ khóa trong tên campus (VD: "Đinh Nhu" → mẫu Đinh Nhu)
+  const getTemplateForSubmission = (campusName: string): AdmissionTemplate => {
+    if (!campusName) return admissionTemplates['Hải Phòng'];
+
+    // 1. Tìm exact match trước
+    if (admissionTemplates[campusName]) return admissionTemplates[campusName];
+
+    // 2. Tìm theo từ khóa trong tên campus (bỏ qua hoa/thường)
+    const lowerCampus = campusName.toLowerCase();
+    const CAMPUS_KEYWORDS: { keyword: string; templateKey: string }[] = [
+      { keyword: 'đinh nhu', templateKey: 'Đinh Nhu' },
+      { keyword: 'nam đồng', templateKey: 'Nam Đồng' },
+      { keyword: 'hải phòng', templateKey: 'Hải Phòng' },
+    ];
+    for (const { keyword, templateKey } of CAMPUS_KEYWORDS) {
+      if (lowerCampus.includes(keyword) && admissionTemplates[templateKey]) {
+        return admissionTemplates[templateKey];
+      }
+    }
+
+    // 3. Fallback về Hải Phòng
+    return admissionTemplates['Hải Phòng'];
+  };
+
   const handlePrintSubmission = async () => {
     if (!selectedSubmission) return;
     let currentSeq = selectedSubmission.docSeq;
-    const template = admissionTemplates[selectedSubmission.campus] || admissionTemplates['Hải Phòng'];
+    const template = getTemplateForSubmission(selectedSubmission.campus);
 
     // Generate PDF for email attachment
     let pdfBase64 = null;
