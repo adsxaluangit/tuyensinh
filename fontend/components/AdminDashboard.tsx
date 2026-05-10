@@ -1392,9 +1392,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
     const template = admissionTemplates['Thu học phí'];
-    // Lấy địa chỉ đúng theo cơ sở học viên đăng ký (giống giấy báo)
-    const campusTemplate = getTemplateForSubmission((s as any).campus);
-    const campusLocation = campusTemplate?.location || template.location;
+    // Mapping địa chỉ ngắn gọn theo cơ sở đăng ký
+    const getCampusAddress = (campusName: string): string => {
+      const lower = (campusName || '').toLowerCase();
+      if (lower.includes('đinh nhu')) return 'Số 22 Đinh Nhu, phường An Biên - Hải Phòng';
+      if (lower.includes('nam đồng')) return 'Phố Tân Lập, phường Nam Đồng - Hải Phòng';
+      return 'Số 498 Đà Nẵng, Phường Đông Hải - Hải Phòng';
+    };
+    const campusLocation = getCampusAddress((s as any).campus);
     const now = new Date();
     const formattedDate = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
     const docNumber = `BK-${Math.floor(Math.random() * 900000 + 100000)}`;
