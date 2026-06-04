@@ -354,8 +354,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     if (isBackingUp) return;
     setIsBackingUp(true);
     try {
-      // Xác định URL backup từ hostname hiện tại
-      const backupUrl = `${window.location.protocol}//${window.location.hostname}:8090/backup`;
+      // Gọi qua nginx proxy — không bị CORS
+      const backupUrl = `/backup-api/backup`;
       const res = await fetch(backupUrl, { method: 'POST' });
       const data = await res.json();
       if (data.status === 'success') {
