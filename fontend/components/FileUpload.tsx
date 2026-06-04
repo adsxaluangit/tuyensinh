@@ -1,10 +1,4 @@
-
 import React, { useState } from 'react';
-
-// URL Strapi (lấy từ env hoặc relative)
-const STRAPI_URL = (import.meta.env.PROD && !window.location.hostname.includes('localhost'))
-  ? ''
-  : (import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337');
 
 interface FileUploadProps {
   label: string;
@@ -40,12 +34,12 @@ const FileUpload: React.FC<FileUploadProps> = ({ label, required, placeholderIma
       reader.readAsDataURL(file);
 
       try {
-        // Upload lên Strapi
+        // Tạo form data để upload
         const formData = new FormData();
         formData.append('files', file);
 
-        const uploadUrl = STRAPI_URL ? `${STRAPI_URL}/api/upload` : 'api/upload';
-        const res = await fetch(uploadUrl, {
+        // Luôn dùng relative path để đi qua nginx proxy
+        const res = await fetch('/api/upload', {
           method: 'POST',
           body: formData,
         });
@@ -55,10 +49,10 @@ const FileUpload: React.FC<FileUploadProps> = ({ label, required, placeholderIma
         const data = await res.json();
         const uploadedFile = Array.isArray(data) ? data[0] : data;
 
-        // Lấy URL tương đối hoặc tuyệt đối
+        // URL luôn là relative (ví dụ: /uploads/abc.jpg)
         const fileUrl = uploadedFile.url.startsWith('http')
           ? uploadedFile.url
-          : `${STRAPI_URL}${uploadedFile.url}`;
+          : uploadedFile.url;  // giữ nguyên relative path
 
         if (onFileChange) onFileChange(fileUrl);
       } catch (err) {
