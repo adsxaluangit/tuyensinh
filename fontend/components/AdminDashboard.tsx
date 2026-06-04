@@ -341,6 +341,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [isEducationLevelModalOpen, setIsEducationLevelModalOpen] = useState(false);
   const [editingEducationLevel, setEditingEducationLevel] = useState<EducationLevelConfig | null>(null);
 
+  // --- Backup thủ công ---
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [backupToast, setBackupToast] = useState<{ type: 'success' | 'error'; message: string; file?: string } | null>(null);
+
+  const showBackupToast = (type: 'success' | 'error', message: string, file?: string) => {
+    setBackupToast({ type, message, file });
+    setTimeout(() => setBackupToast(null), 5000);
+  };
+
+  const handleManualBackup = async () => {
+    if (isBackingUp) return;
+    setIsBackingUp(true);
+    try {
+      // Xác định URL backup từ hostname hiện tại
+      const backupUrl = `${window.location.protocol}//${window.location.hostname}:8090/backup`;
+      const res = await fetch(backupUrl, { method: 'POST' });
+      const data = await res.json();
+      if (data.status === 'success') {
+        showBackupToast('success', data.message, data.file);
+      } else {
+        showBackupToast('error', data.message || 'Backup thất bại!');
+      }
+    } catch (err) {
+      showBackupToast('error', 'Không thể kết nối đến backup service!');
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
   const handleTabChange = (tab: typeof activeTab) => {
     if ((user?.role === 'Cán bộ tiếp nhận' || user?.role === 'Cán bộ duyệt hồ sơ') && tab !== 'submissions') {
       alert('Bạn không có quyền truy cập chức năng này!');
@@ -1996,6 +2025,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <HorizontalMenuButton active={activeTab === 'admission-templates'} onClick={() => handleTabChange('admission-templates')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>} label="Mẫu văn bản" />
             <HorizontalMenuButton active={activeTab === 'tuition-config'} onClick={() => handleTabChange('tuition-config')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} label="Cài đặt" />
             {isAdmin && <HorizontalMenuButton active={activeTab === 'roles'} onClick={() => handleTabChange('roles')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>} label="Phân quyền" />}
+            {isAdmin && (
+              <button
+                id="btn-manual-backup"
+                onClick={handleManualBackup}
+                disabled={isBackingUp}
+                title="Backup cơ sở dữ liệu ngay bây giờ"
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl transition-all font-bold text-xs whitespace-nowrap border shrink-0
+                  ${ isBackingUp
+                    ? 'bg-amber-400/20 text-amber-300 border-amber-400/30 cursor-not-allowed'
+                    : 'text-amber-300 hover:text-white hover:bg-amber-500/20 border-amber-400/30 hover:border-amber-400/50'
+                  }`}
+              >
+                {isBackingUp ? (
+                  <svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10" /></svg>
+                )}
+                {isBackingUp ? 'Backup...' : 'Backup ngay'}
+              </button>
+            )}
           </nav>
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
@@ -2009,6 +2058,35 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           </div>
         </div>
       </header>
+
+      {/* Toast Backup Notification */}
+      {backupToast && (
+        <div
+          className={`fixed top-5 right-5 z-[200] flex items-start gap-3 px-5 py-4 rounded-2xl shadow-2xl border max-w-sm animate-slide-in-right
+            ${ backupToast.type === 'success'
+              ? 'bg-emerald-900/95 border-emerald-500/40 text-white'
+              : 'bg-red-900/95 border-red-500/40 text-white'
+            }`}
+        >
+          <div className="shrink-0 mt-0.5">
+            {backupToast.type === 'success' ? (
+              <svg className="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            ) : (
+              <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="font-black text-sm">{backupToast.type === 'success' ? '✅ Backup thành công!' : '❌ Backup thất bại'}</p>
+            <p className="text-xs opacity-80 mt-0.5">{backupToast.message}</p>
+            {backupToast.file && (
+              <p className="text-[10px] font-mono text-emerald-300 mt-1 opacity-70">{backupToast.file}</p>
+            )}
+          </div>
+          <button onClick={() => setBackupToast(null)} className="shrink-0 text-white/40 hover:text-white transition-colors">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
+      )}
 
       <main className="flex-1 overflow-y-auto bg-gray-50/50 p-8">
         {activeTab === 'submissions' ? (

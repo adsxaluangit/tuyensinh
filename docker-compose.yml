@@ -88,6 +88,10 @@ services:
       POSTGRES_DB: tuyensinh_db
     volumes:
       - backup-data:/backups
+      - backend-uploads:/uploads:ro          # backup ảnh/file Strapi (read-only)
+      - ./backup-files:/backups/host         # lưu backup ra thư mục host
+    ports:
+      - "8090:8080"                          # HTTP trigger: POST /backup, GET /status
     depends_on:
       - db
     networks:
