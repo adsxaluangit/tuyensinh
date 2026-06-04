@@ -24,7 +24,7 @@ WORKDIR /opt/app
 COPY --from=build /opt/app ./
 ENV PATH /opt/node_modules/.bin:$PATH
 
-RUN chown -R node:node /opt/app
+RUN chown -R node:node /opt/app && mkdir -p /opt/app/public/uploads && chmod -R 777 /opt/app/public/uploads
 USER node
 EXPOSE 1338
 CMD ["npm", "run", "start"]
