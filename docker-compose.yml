@@ -58,7 +58,7 @@ services:
       retries: 3
       start_period: 60s
     volumes:
-      - backend-uploads:/opt/app/public/uploads
+      - ./uploads:/opt/app/public/uploads    # ảnh lưu trực tiếp ra D:\Github\tuyensinh\uploads\
 
   frontend:
     build:
@@ -88,7 +88,7 @@ services:
       POSTGRES_DB: tuyensinh_db
     volumes:
       - backup-data:/backups
-      - backend-uploads:/uploads:ro          # backup ảnh/file Strapi (read-only)
+      - ./uploads:/uploads:ro               # backup ảnh/file Strapi (read-only)
       - ./backup-files:/backups/host         # lưu backup ra thư mục host
     ports:
       - "8090:8080"                          # HTTP trigger: POST /backup, GET /status
@@ -99,7 +99,7 @@ services:
 
 volumes:
   tuyensinh-data:
-  backend-uploads:
+  # backend-uploads: (đã chuyển sang bind mount ./uploads)
   backup-data:
 
 
