@@ -1,0 +1,47 @@
+{
+    "kind": "collectionType",
+    "collectionName": "activity_logs",
+    "info": {
+        "singularName": "activity-log",
+        "pluralName": "activity-logs",
+        "displayName": "Nhật ký hoạt động",
+        "description": "Ghi lại lịch sử thao tác của cán bộ"
+    },
+    "options": {
+        "draftAndPublish": false
+    },
+    "attributes": {
+        "staffName": {
+            "type": "string"
+        },
+        "username": {
+            "type": "string"
+        },
+        "role": {
+            "type": "string"
+        },
+        "action": {
+            "type": "enumeration",
+            "enum": [
+                "LOGIN",
+                "LOGOUT",
+                "APPROVE",
+                "RECEIVE",
+                "REJECT",
+                "LOCK",
+                "DELETE",
+                "EDIT",
+                "TUITION",
+                "BACKUP",
+                "EXPORT",
+                "VIEW"
+            ]
+        },
+        "detail": {
+            "type": "text"
+        },
+        "targetId": {
+            "type": "string"
+        }
+    }
+}

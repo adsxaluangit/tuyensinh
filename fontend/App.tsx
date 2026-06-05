@@ -8,6 +8,7 @@ import DateSelector from './components/DateSelector';
 import { PROVINCES } from './constants';
 import { RecipientType, AddressType, FormData, SubmissionStatus, User } from './types';
 import * as api from './api';
+import { createActivityLog } from './api';
 
 const SUBJECTS = [
   'Toán', 'Văn', 'Anh', 'Lý', 'Tin', 'Hóa', 'Sinh', 'Sử', 'Địa', 'Công nghệ'
@@ -99,6 +100,11 @@ const App: React.FC = () => {
     SUBJECTS.reduce((acc, sub) => ({ ...acc, [sub]: '' }), {})
   );
 
+  // Chỉ hiển thị phần điểm khi hệ đào tạo là "Cao đẳng"
+  const showGrades = formData.educationLevel === 'Cao đẳng';
+  // Ẩn upload Bằng tốt nghiệp khi hệ là "Trung cấp"
+  const showDiploma = formData.educationLevel !== 'Trung cấp';
+
   const [files, setFiles] = useState<{
     frontId: string | null;
     backId: string | null;
@@ -175,8 +181,8 @@ const App: React.FC = () => {
     const campusObj = availableCampuses.find(c => c.name === formData.campus);
     const levelObj = availableLevels.find(l => l.name === formData.educationLevel);
 
-    // Validate required files
-    if (!files.frontId || !files.backId || !files.diploma || !files.tempCert || !files.electronicId) {
+    // Validate required files (bằng TN không bắt buộc với Trung cấp)
+    if (!files.frontId || !files.backId || (showDiploma && !files.diploma) || !files.tempCert || !files.electronicId) {
       alert('Vui lòng tải lên đầy đủ các giấy tờ xác thực bắt buộc (*)');
       return;
     }
@@ -205,7 +211,7 @@ const App: React.FC = () => {
       isUniformSelected: true,
       campus: campusObj?.numericId,
       educationLevel: levelObj?.numericId,
-      grades: grades // Ensure grades is explicitly included
+      grades: showGrades ? grades : {} // Chỉ gửi điểm khi là hệ Cao đẳng
     });
 
     try {
@@ -233,8 +239,10 @@ const App: React.FC = () => {
     try {
       // 1. Hardcoded emergency admin check (optional but currently in your code)
       if (username === 'admin' && password === 'admin123') {
-        setCurrentUser({ id: '0', fullName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString() });
+        const adminUser = { id: '0', fullName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', status: 'Hoạt động', lastLogin: new Date().toISOString() };
+        setCurrentUser(adminUser);
         setView('admin');
+        createActivityLog({ staffName: 'Quản trị viên', username: 'admin', role: 'Quản trị viên', action: 'LOGIN', detail: 'Đăng nhập hệ thống' });
         return;
       }
 
@@ -248,6 +256,14 @@ const App: React.FC = () => {
           id: foundUser.documentId || foundUser.id
         });
         setView('admin');
+        // Ghi nhật ký đăng nhập
+        createActivityLog({
+          staffName: foundUser.fullName || foundUser.username,
+          username: foundUser.username,
+          role: foundUser.role || '',
+          action: 'LOGIN',
+          detail: `Đăng nhập hệ thống`,
+        });
       } else {
         setLoginError('Tên đăng nhập hoặc mật khẩu không chính xác (hoặc tài khoản đã bị khóa)');
       }
@@ -585,7 +601,23 @@ const App: React.FC = () => {
               </InputGroup>
 
               <InputGroup label="Hệ đào tạo" required>
-                <select className={selectClasses} required value={formData.educationLevel} onChange={(e) => setFormData({ ...formData, educationLevel: e.target.value, choice1Major: '', choice1Specialty: '' })}>
+                <select
+                  className={selectClasses}
+                  required
+                  value={formData.educationLevel}
+                  onChange={(e) => {
+                    const newLevel = e.target.value;
+                    // Reset grades khi đổi sang hệ không cần điểm
+                    if (newLevel !== 'Cao đẳng') {
+                      setGrades(SUBJECTS.reduce((acc, sub) => ({ ...acc, [sub]: '' }), {}));
+                    }
+                    // Reset diploma khi đổi sang Trung cấp
+                    if (newLevel === 'Trung cấp') {
+                      setFiles(prev => ({ ...prev, diploma: null }));
+                    }
+                    setFormData({ ...formData, educationLevel: newLevel, choice1Major: '', choice1Specialty: '' });
+                  }}
+                >
                   <option value="">-- Chọn hệ đào tạo --</option>
                   {availableLevels.map(el => <option key={el.id} value={el.name}>{el.name}</option>)}
                 </select>
@@ -657,26 +689,36 @@ const App: React.FC = () => {
               </InputGroup>
             </div>
 
-            <div className="pt-8 border-t border-gray-100 mt-8">
-              <h3 className="text-[12px] font-black text-red-600 mb-6 uppercase tracking-[0.2em] text-center">ĐIỂM TRUNG BÌNH CÁC MÔN NĂM CUỐI CẤP</h3>
-              <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
-                {SUBJECTS.map((sub) => (
-                  <div key={sub} className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold text-gray-500 text-center uppercase">{sub} <span className="text-red-500">*</span></label>
-                    <input type="text" required placeholder="-" className="w-full bg-blue-50/20 border-2 border-blue-500/10 rounded-xl px-2 py-2 text-sm text-center font-bold text-blue-900 focus:border-blue-500 outline-none transition-all shadow-sm" value={grades[sub]} onChange={(e) => {
-                      let val = e.target.value.replace(/[^0-9.]/g, '');
-                      const parts = val.split('.');
-                      if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
-                      if (val !== '' && parseFloat(val) > 10) val = '10';
-                      setGrades({ ...grades, [sub]: val });
-                    }} />
-                  </div>
-                ))}
+            {/* Phần điểm — chỉ hiển thị khi hệ đào tạo là Cao đẳng */}
+            {showGrades && (
+              <div className="pt-8 border-t border-gray-100 mt-8">
+                <h3 className="text-[12px] font-black text-red-600 mb-6 uppercase tracking-[0.2em] text-center">ĐIỂM TRUNG BÌNH CÁC MÔN NĂM CUỐI CẤP</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
+                  {SUBJECTS.map((sub) => (
+                    <div key={sub} className="flex flex-col gap-2">
+                      <label className="text-[10px] font-bold text-gray-500 text-center uppercase">{sub} <span className="text-red-500">*</span></label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="-"
+                        className="w-full bg-blue-50/20 border-2 border-blue-500/10 rounded-xl px-2 py-2 text-sm text-center font-bold text-blue-900 focus:border-blue-500 outline-none transition-all shadow-sm"
+                        value={grades[sub] || ''}
+                        onChange={(e) => {
+                          let val = e.target.value.replace(/[^0-9.]/g, '');
+                          const parts = val.split('.');
+                          if (parts.length > 2) val = parts[0] + '.' + parts.slice(1).join('');
+                          if (val !== '' && parseFloat(val) > 10) val = '10';
+                          setGrades({ ...grades, [sub]: val });
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-[11px] text-red-600 font-bold italic mt-4 text-center">
+                  * Ghi chú: Các môn không thuộc phân ban đã học thì điền số "0"
+                </p>
               </div>
-              <p className="text-[11px] text-red-600 font-bold italic mt-4 text-center">
-                * Ghi chú: Các môn không thuộc phân ban đã học thì điền số "0"
-              </p>
-            </div>
+            )}
           </FormSection>
 
           <FormSection title="THÔNG TIN GỬI GIẤY BÁO KẾT QUẢ">
@@ -715,11 +757,13 @@ const App: React.FC = () => {
           </FormSection>
 
           <FormSection title="TẢI LÊN GIẤY TỜ XÁC THỰC">
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 lg:gap-10">
+            <div className={`grid gap-4 lg:gap-10 grid-cols-2 ${showDiploma ? 'md:grid-cols-5' : 'md:grid-cols-4'}`}>
               <FileUpload label="CCCD mặt trước" required placeholderImage={files.frontId || "/assets/cccd_front.png"} onFileChange={(b64) => setFiles({ ...files, frontId: b64 })} />
               <FileUpload label="CCCD mặt sau" required placeholderImage={files.backId || "/assets/cccd_back.png"} onFileChange={(b64) => setFiles({ ...files, backId: b64 })} />
               <FileUpload label="Căn cước Điện tử" required placeholderImage={files.electronicId || "/assets/cccd_front.png"} helperText="Hướng dẫn: Vào VNeID > Thẻ căn cước > Căn cước điện tử > Chụp ảnh màn hình" onFileChange={(b64) => setFiles({ ...files, electronicId: b64 })} />
-              <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "/assets/diploma.png"} helperText={`- Liên thông Cao đẳng: nộp bổ sung bằng Trung cấp\n- Liên thông Trung cấp: nộp bổ sung bằng Sơ cấp`} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
+              {showDiploma && (
+                <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "/assets/diploma.png"} helperText={`- Liên thông Cao đẳng: nộp bổ sung bằng Trung cấp\n- Liên thông Trung cấp: nộp bổ sung bằng Sơ cấp`} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
+              )}
               <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "/assets/transcript.png"} onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
             </div>
           </FormSection>

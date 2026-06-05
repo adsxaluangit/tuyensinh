@@ -382,3 +382,53 @@ export const createSystemSetting = async (data: any) => {
         body: JSON.stringify({ data }),
     });
 };
+
+// ============================================================
+// Activity Log — Nhật ký hoạt động
+// ============================================================
+export type ActivityAction =
+    | 'LOGIN' | 'LOGOUT'
+    | 'APPROVE' | 'RECEIVE' | 'REJECT' | 'LOCK'
+    | 'DELETE' | 'EDIT' | 'TUITION'
+    | 'BACKUP' | 'EXPORT' | 'VIEW';
+
+export const createActivityLog = async (data: {
+    staffName: string;
+    username: string;
+    role: string;
+    action: ActivityAction;
+    detail: string;
+    targetId?: string;
+}) => {
+    try {
+        return await fetchAPI('/api/activity-logs', {
+            method: 'POST',
+            body: JSON.stringify({ data }),
+        });
+    } catch {
+        // Log lỗi nhẹ — không để lỗi log ảnh hưởng đến chức năng chính
+        console.warn('Không thể ghi nhật ký:', data.action);
+    }
+};
+
+export const fetchActivityLogs = async (params: {
+    page?: number;
+    pageSize?: number;
+    username?: string;
+    action?: string;
+    dateFrom?: string;
+    dateTo?: string;
+} = {}) => {
+    const { page = 1, pageSize = 50, username, action, dateFrom, dateTo } = params;
+    let url = `/api/activity-logs?pagination[page]=${page}&pagination[pageSize]=${pageSize}&sort[0]=createdAt:desc`;
+    if (username) url += `&filters[username][$eq]=${username}`;
+    if (action) url += `&filters[action][$eq]=${action}`;
+    if (dateFrom) url += `&filters[createdAt][$gte]=${dateFrom}`;
+    if (dateTo) url += `&filters[createdAt][$lte]=${dateTo}`;
+    return await fetchAPI(url);
+};
+
+export const deleteActivityLog = async (documentId: string) => {
+    return await fetchAPI(`/api/activity-logs/${documentId}`, { method: 'DELETE' });
+};
+
