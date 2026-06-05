@@ -5,6 +5,7 @@ import html2pdf from 'html2pdf.js';
 import { FormData, RecipientType, AddressType, SubmissionStatus, User, TuitionStatus } from '../types';
 import { CAMPUSES, MAJORS, SPECIALTIES, EDUCATION_LEVELS, PROVINCES } from '../constants';
 import * as api from '../api';
+import { createActivityLog, fetchActivityLogs, deleteActivityLog } from '../api';
 
 const SUBJECTS = [
   'Toán', 'Văn', 'Anh', 'Lý', 'Tin', 'Hóa', 'Sinh', 'Sử', 'Địa', 'Công nghệ'
@@ -209,9 +210,98 @@ const TuitionPaidInput: React.FC<{
 };
 
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
-  const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates'>(
+  const [activeTab, setActiveTab] = useState<'submissions' | 'roles' | 'tuition' | 'tuition-config' | 'admission-templates' | 'logs'>(
     user?.role === 'Kế toán' ? 'tuition' : 'submissions'
   );
+
+  // Nhật ký hoạt động
+  const [activityLogs, setActivityLogs] = useState<any[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logFilterUser, setLogFilterUser] = useState('');
+  const [logFilterAction, setLogFilterAction] = useState('');
+
+  // Helper ghi log nhanh
+  const logAction = (action: Parameters<typeof createActivityLog>[0]['action'], detail: string, targetId?: string) => {
+    if (!user) return;
+    createActivityLog({
+      staffName: user.fullName || user.username,
+      username: user.username,
+      role: user.role || '',
+      action,
+      detail,
+      targetId,
+    });
+  };
+
+  const fetchLogs = async () => {
+    setLogsLoading(true);
+    try {
+      const res = await fetchActivityLogs({ pageSize: 100, username: logFilterUser || undefined, action: logFilterAction || undefined });
+      setActivityLogs(res?.data || []);
+    } catch { /* silent */ } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  // Xuất nhật ký ra file .txt
+  const exportLogsToTxt = async () => {
+    try {
+      // Lấy tối đa 500 bản ghi
+      const res = await fetchActivityLogs({ pageSize: 500, username: logFilterUser || undefined, action: logFilterAction || undefined });
+      const logs: any[] = res?.data || [];
+
+      const actionLabels: Record<string, string> = {
+        LOGIN: 'Đăng nhập',  LOGOUT: 'Đăng xuất',
+        APPROVE: 'Duyệt trúng tuyển', RECEIVE: 'Tiếp nhận hồ sơ',
+        LOCK: 'Khóa hồ sơ', REJECT: 'Hủy trạng thái',
+        DELETE: 'Xóa hồ sơ', EDIT: 'Chỉnh sửa',
+        TUITION: 'Học phí', BACKUP: 'Backup dữ liệu',
+        EXPORT: 'Xuất dữ liệu', VIEW: 'Xem hồ sơ',
+      };
+
+      const now = new Date();
+      const dateStr = now.toLocaleString('vi-VN');
+      const fileNameDate = now.toISOString().slice(0,10).replace(/-/g,'') + '_' + now.toTimeString().slice(0,5).replace(':','');
+
+      let content = '';
+      content += '===============================================================\n';
+      content += '       NHẬT KÝ HOẠT ĐỘNG HỆ THỐNG TUYỂN SINH\n';
+      content += '       Trường Cao đẳng Hàng hải và Đường thuỷ I\n';
+      content += '===============================================================\n';
+      content += `  Xuất lúc   : ${dateStr}\n`;
+      content += `  Người xuất  : ${user?.fullName || user?.username} (${user?.role})\n`;
+      if (logFilterUser) content += `  Lọc user   : @${logFilterUser}\n`;
+      if (logFilterAction) content += `  Lọc hành động: ${actionLabels[logFilterAction] || logFilterAction}\n`;
+      content += `  Tổng bản ghi: ${logs.length}\n`;
+      content += '===============================================================\n\n';
+
+      logs.forEach((log, idx) => {
+        const time = new Date(log.createdAt).toLocaleString('vi-VN');
+        const action = actionLabels[log.action] || log.action;
+        content += `[${String(idx + 1).padStart(4, '0')}] ${time}  |  ${action.toUpperCase()}\n`;
+        content += `       Cán bộ  : ${log.staffName} (@${log.username})\n`;
+        content += `       Vai trò  : ${log.role}\n`;
+        content += `       Chi tiết : ${log.detail}\n`;
+        if (log.targetId) content += `       Mã HS    : ${log.targetId}\n`;
+        content += '       -------------------------------------------------------\n';
+      });
+
+      content += '\n===============================================================\n';
+      content += `  Hết nhật ký — Tổng ${logs.length} hoạt động\n`;
+      content += '===============================================================\n';
+
+      // Tạo file và tải về
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `nhatky_${fileNameDate}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert('Không thể xuất nhật ký. Vui lòng thử lại.');
+    }
+  };
   const [tuitionPagination, setTuitionPagination] = useState({ page: 1, pageSize: 25 });
   const [tuitionTotalCount, setTuitionTotalCount] = useState(0);
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform'>('campuses');
@@ -354,12 +444,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     if (isBackingUp) return;
     setIsBackingUp(true);
     try {
-      // Gọi qua nginx proxy — không bị CORS
       const backupUrl = `/backup-api/backup`;
       const res = await fetch(backupUrl, { method: 'POST' });
       const data = await res.json();
       if (data.status === 'success') {
         showBackupToast('success', data.message, data.file);
+        logAction('BACKUP', `Backup thủ công thành công: ${data.file || ''}`);
       } else {
         showBackupToast('error', data.message || 'Backup thất bại!');
       }
@@ -1261,6 +1351,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     if (selectedIds.size === 0) return alert('Vui lòng chọn ít nhất một hồ sơ!');
     try {
       const idsToUpdate = Array.from(selectedIds);
+      const names: string[] = [];
       for (const id of idsToUpdate) {
         const sub = submissions.find(s => s.id === id);
         if (sub?.docId) {
@@ -1268,8 +1359,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             status,
             syncAmounts: status === SubmissionStatus.APPROVED
           });
+          names.push(sub.fullName || id);
         }
       }
+      // Ghi log
+      const actionMap: Record<string, Parameters<typeof createActivityLog>[0]['action']> = {
+        'Trúng tuyển': 'APPROVE', 'Đã tiếp nhận hồ sơ': 'RECEIVE',
+        'Đã khóa': 'LOCK', 'Chờ Duyệt': 'REJECT'
+      };
+      logAction(actionMap[status] || 'EDIT', `Cập nhật trạng thái "${status}" cho ${names.length} hồ sơ: ${names.slice(0,3).join(', ')}${names.length > 3 ? '...' : ''}`);
       fetchData();
       alert(`Đã cập nhật trạng thái cho ${selectedIds.size} hồ sơ.`);
     } catch (error) {
@@ -1279,16 +1377,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return alert('Vui lòng chọn ít nhất một hồ sơ để xóa!');
-
     if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.size} hồ sơ đã chọn? Thao tác này không thể hoàn tác.`)) {
       try {
         const idsToRemove = Array.from(selectedIds);
+        const names: string[] = [];
         for (const id of idsToRemove) {
           const submission = submissions.find(s => s.id === id);
           if (submission?.docId) {
             await api.deleteRegistration(submission.docId);
+            names.push(submission.fullName || id);
           }
         }
+        logAction('DELETE', `Xóa ${names.length} hồ sơ: ${names.slice(0,3).join(', ')}${names.length > 3 ? '...' : ''}`);
         alert(`Đã xóa thành công ${selectedIds.size} hồ sơ.`);
         setSelectedIds(new Set());
         fetchData();
@@ -1300,10 +1400,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     }
   };
 
-  const handleDeleteSingle = async (docId: string) => {
+  const handleDeleteSingle = async (docId: string, name?: string) => {
     if (window.confirm("Bạn có chắc chắn muốn xóa hồ sơ này? Thao tác này không thể hoàn tác.")) {
       try {
         await api.deleteRegistration(docId);
+        logAction('DELETE', `Xóa hồ sơ: ${name || docId}`, docId);
         alert("Đã xóa hồ sơ thành công.");
         fetchData();
       } catch (error) {
@@ -1327,6 +1428,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       if (refreshed?.data) {
         setSelectedSubmission(prev => ({ ...prev, ...refreshed.data.attributes, id: refreshed.data.id, docId: refreshed.data.documentId }));
       }
+
+      // Ghi nhật ký cho từng loại thao tác
+      const name = selectedSubmission.fullName || selectedSubmission.idNumber || selectedSubmission.docId;
+      const actionMap: Record<string, Parameters<typeof createActivityLog>[0]['action']> = {
+        'Trúng tuyển': 'APPROVE',
+        'Đã tiếp nhận hồ sơ': 'RECEIVE',
+        'Đã khóa': 'LOCK',
+        'Chờ Duyệt': 'REJECT',
+      };
+      const detailMap: Record<string, string> = {
+        'Trúng tuyển': `Duyệt trúng tuyển: ${name}`,
+        'Đã tiếp nhận hồ sơ': `Tiếp nhận hồ sơ: ${name}`,
+        'Đã khóa': `Khóa hồ sơ: ${name}`,
+        'Chờ Duyệt': `Hủy trạng thái: ${name}`,
+      };
+      logAction(
+        actionMap[status] || 'EDIT',
+        detailMap[status] || `Cập nhật trạng thái "${status}": ${name}`,
+        selectedSubmission.docId
+      );
 
       if (status === SubmissionStatus.RECEIVED) {
         alert("Đã tiếp nhận hồ sơ");
@@ -1389,6 +1510,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           admissionNoticePdf: pdfBase64 // Phải gửi PDF khi duyệt
         });
 
+        // Ghi nhật ký duyệt & in
+        logAction('APPROVE', `Duyệt trúng tuyển & In giấy báo: ${selectedSubmission.fullName || selectedSubmission.idNumber} (Số BD: ${currentSeq})`, selectedSubmission.docId);
+
         // Re-fetch data
         await fetchData();
 
@@ -1408,6 +1532,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           status: SubmissionStatus.APPROVED,
           admissionNoticePdf: pdfBase64
         });
+        // Ghi nhật ký in lại
+        logAction('APPROVE', `In lại giấy báo trúng tuyển: ${selectedSubmission.fullName || selectedSubmission.idNumber} (Số BD: ${currentSeq})`, selectedSubmission.docId);
         await updateCurrentSubmissionStatus(SubmissionStatus.APPROVED);
       } catch (err) {
         console.error("Lỗi cập nhật PDF:", err);
@@ -2025,6 +2151,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <HorizontalMenuButton active={activeTab === 'admission-templates'} onClick={() => handleTabChange('admission-templates')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>} label="Mẫu văn bản" />
             <HorizontalMenuButton active={activeTab === 'tuition-config'} onClick={() => handleTabChange('tuition-config')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} label="Cài đặt" />
             {isAdmin && <HorizontalMenuButton active={activeTab === 'roles'} onClick={() => handleTabChange('roles')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>} label="Phân quyền" />}
+            {isAdmin && <HorizontalMenuButton active={activeTab === 'logs'} onClick={() => { handleTabChange('logs'); fetchLogs(); }} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>} label="Nhật ký" />}
             {isAdmin && (
               <button
                 id="btn-manual-backup"
@@ -2088,7 +2215,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         </div>
       )}
 
-      <main className="flex-1 overflow-y-auto bg-gray-50/50 p-8">
+      <main className="flex-1 overflow-y-auto bg-gray-50/50 p-8" style={activeTab === 'logs' ? { display: 'none' } : {}}>
         {activeTab === 'submissions' ? (
           <div className="max-w-7xl mx-auto space-y-6">
             <header className="flex justify-between items-center mb-8">
@@ -2232,6 +2359,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                                   const collector = user.fullName || user.username;
                                   setTuitionSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now } : item));
                                   await api.updateRegistration(s.docId, { tuitionPaidAmount: paid, tuitionStatus: status, collectorAccount: collector, collectedDate: now });
+                                  // Ghi nhật ký học phí
+                                  const statusLabel = status === 'Da nop du' ? 'Nộp đủ' : status === 'Nop mot phan' ? 'Nộp một phần' : 'Chưa nộp';
+                                  logAction('TUITION', `Cập nhật học phí: ${s.fullName || s.id} — Đã nộp: ${paid.toLocaleString('vi-VN')}đ (${statusLabel})`, s.docId);
                                 } catch (err) {
                                   console.error(err);
                                   alert("Lỗi khi cập nhật số tiền đã nộp");
@@ -2249,6 +2379,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                               const collector = user.fullName || user.username;
                               setTuitionSubmissions(prev => prev.map(item => item.id === s.id ? { ...item, paymentMethod: newMethod, collectorAccount: collector, collectedDate: now } : item));
                               await api.updateRegistration(s.docId, { paymentMethod: newMethod, collectorAccount: collector, collectedDate: now });
+                              // Ghi nhật ký phương thức thanh toán
+                              logAction('TUITION', `Cập nhật phương thức thanh toán: ${s.fullName || s.id} — ${newMethod}`, s.docId);
                             } catch (err) {
                               alert("Lỗi khi lưu phương thức thanh toán");
                               fetchTuitionData();
@@ -2540,7 +2672,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </>
             )}
           </div>
-        ) : (
+        ) : activeTab === 'roles' ? (
           isAdmin && (
             <div className="max-w-7xl mx-auto space-y-6">
               <header className="flex justify-between items-center mb-8">
@@ -2562,7 +2694,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </div>
             </div>
           )
-        )}
+        ) : null}
       </main>
 
       {isUserModalOpen && (
@@ -2716,6 +2848,125 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 {user?.role !== 'Cán bộ tiếp nhận' && <button onClick={handlePrintSubmission} className="px-10 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-red-600/20 hover:bg-red-700 active:scale-95 transition-all">Duyệt & In giấy báo</button>}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ===== TAB NHẬT KÝ HOẠT ĐỘNG ===== */}
+      {activeTab === 'logs' && isAdmin && (
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex justify-between items-center mb-6">
+              <div>
+                <h2 className="text-2xl font-black text-blue-950 tracking-tight">Nhật ký hoạt động</h2>
+                <p className="text-gray-500 text-sm mt-1">Lịch sử thao tác của tất cả tài khoản cán bộ</p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={async () => {
+                    if (!window.confirm(`Xóa toàn bộ ${activityLogs.length} bản ghi nhật ký? Thao tác này không thể hoàn tác.`)) return;
+                    try {
+                      for (const log of activityLogs) {
+                        await deleteActivityLog(log.documentId || log.id);
+                      }
+                      setActivityLogs([]);
+                    } catch { alert('Lỗi khi xóa nhật ký'); }
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-xl text-xs font-bold hover:bg-red-700 transition-all flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2M4 7h16" /></svg>
+                  Xóa tất cả
+                </button>
+                <button onClick={exportLogsToTxt} className="px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-600 transition-all flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Xuất TXT
+                </button>
+                <button onClick={fetchLogs} className="px-4 py-2 bg-blue-900 text-white rounded-xl text-xs font-bold hover:bg-blue-800 transition-all flex items-center gap-2">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  Làm mới
+                </button>
+              </div>
+            </div>
+            {/* Bộ lọc */}
+            <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 flex gap-4 flex-wrap items-center">
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Người dùng:</label>
+                <input type="text" placeholder="Lọc username..." value={logFilterUser} onChange={e => setLogFilterUser(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500" />
+              </div>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Hành động:</label>
+                <select value={logFilterAction} onChange={e => setLogFilterAction(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500">
+                  <option value="">-- Tất cả --</option>
+                  <option value="LOGIN">Đăng nhập</option>
+                  <option value="LOGOUT">Đăng xuất</option>
+                  <option value="APPROVE">Duyệt trúng tuyển</option>
+                  <option value="RECEIVE">Tiếp nhận</option>
+                  <option value="LOCK">Khóa hồ sơ</option>
+                  <option value="DELETE">Xóa hồ sơ</option>
+                  <option value="EDIT">Chỉnh sửa</option>
+                  <option value="BACKUP">Backup</option>
+                </select>
+              </div>
+              <button onClick={fetchLogs} className="px-4 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-xs font-bold hover:bg-blue-100 border border-blue-200 transition-all">Lọc</button>
+            </div>
+            {/* Bảng nhật ký */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+              {logsLoading ? (
+                <div className="flex items-center justify-center py-20 text-gray-400">
+                  <svg className="w-7 h-7 animate-spin mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                  Đang tải nhật ký...
+                </div>
+              ) : activityLogs.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-20 text-gray-400">
+                  <svg className="w-12 h-12 mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+                  <p className="font-bold text-sm">Chưa có nhật ký nào</p>
+                  <p className="text-xs mt-1">Nhật ký xuất hiện khi cán bộ thực hiện thao tác</p>
+                </div>
+              ) : (
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                    <tr>
+                      <th className="px-5 py-3">Thời gian</th>
+                      <th className="px-5 py-3">Cán bộ</th>
+                      <th className="px-5 py-3">Vai trò</th>
+                      <th className="px-5 py-3">Hành động</th>
+                      <th className="px-5 py-3">Chi tiết</th>
+                      <th className="px-5 py-3 text-center">Xóa</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {activityLogs.map((log: any) => {
+                      const actionColors: Record<string, string> = { LOGIN: 'bg-green-100 text-green-700', LOGOUT: 'bg-gray-100 text-gray-600', APPROVE: 'bg-blue-100 text-blue-700', RECEIVE: 'bg-cyan-100 text-cyan-700', LOCK: 'bg-slate-100 text-slate-700', DELETE: 'bg-red-100 text-red-700', EDIT: 'bg-orange-100 text-orange-700', BACKUP: 'bg-amber-100 text-amber-700', EXPORT: 'bg-purple-100 text-purple-700', TUITION: 'bg-emerald-100 text-emerald-700' };
+                      const actionLabels: Record<string, string> = { LOGIN: '🔑 Đăng nhập', LOGOUT: '🔓 Đăng xuất', APPROVE: '✅ Duyệt', RECEIVE: '📥 Tiếp nhận', LOCK: '🔒 Khóa', DELETE: '🗑️ Xóa', EDIT: '✏️ Sửa', BACKUP: '💾 Backup', EXPORT: '📤 Xuất', TUITION: '💰 Học phí' };
+                      return (
+                        <tr key={log.id} className="hover:bg-red-50/30 transition-colors">
+                          <td className="px-5 py-3 text-gray-400 text-xs whitespace-nowrap">{new Date(log.createdAt).toLocaleString('vi-VN')}</td>
+                          <td className="px-5 py-3"><p className="font-bold text-gray-800">{log.staffName}</p><p className="text-gray-400 text-xs">@{log.username}</p></td>
+                          <td className="px-5 py-3 text-gray-500 text-xs">{log.role}</td>
+                          <td className="px-5 py-3"><span className={`px-2 py-1 rounded-lg text-[10px] font-black ${actionColors[log.action] || 'bg-gray-100 text-gray-600'}`}>{actionLabels[log.action] || log.action}</span></td>
+                          <td className="px-5 py-3 text-gray-600 text-xs max-w-xs truncate" title={log.detail}>{log.detail}</td>
+                          <td className="px-5 py-3 text-center">
+                            <button
+                              onClick={async () => {
+                                try {
+                                  await deleteActivityLog(log.documentId || log.id);
+                                  setActivityLogs(prev => prev.filter(l => l.id !== log.id));
+                                } catch { alert('Lỗi khi xóa bản ghi'); }
+                              }}
+                              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              title="Xóa bản ghi này"
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v2M4 7h16" /></svg>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 text-right">Hiển thị {activityLogs.length} bản ghi gần nhất</p>
           </div>
         </div>
       )}
