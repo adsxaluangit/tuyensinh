@@ -764,7 +764,7 @@ const App: React.FC = () => {
               {showDiploma && (
                 <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "/assets/diploma.png"} helperText={`- Liên thông Cao đẳng: nộp bổ sung bằng Trung cấp\n- Liên thông Trung cấp: nộp bổ sung bằng Sơ cấp`} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
               )}
-              <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "/assets/transcript.png"} onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
+              <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "/assets/transcript.png"} helperText="Chụp ảnh bảng điểm năm cuối cấp" onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
             </div>
           </FormSection>
 
