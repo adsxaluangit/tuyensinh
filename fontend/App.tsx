@@ -368,7 +368,7 @@ const App: React.FC = () => {
           <FormSection title="THÔNG TIN THÍ SINH">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <InputGroup label="Họ và tên" required>
-                <input type="text" required placeholder="Nhập họ và tên" className={inputClasses} value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
+                <input type="text" required placeholder="Nhập họ và tên" className={inputClasses} style={{ textTransform: 'uppercase' }} value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value.toUpperCase() })} />
               </InputGroup>
               <InputGroup label="Ngày sinh" required>
                 <DateSelector
@@ -685,7 +685,7 @@ const App: React.FC = () => {
                 <input type="text" placeholder="Ví dụ: 2024" className={inputClasses} value={formData.gradYear} onChange={(e) => setFormData({ ...formData, gradYear: e.target.value })} />
               </InputGroup>
               <InputGroup label="Trường tốt nghiệp">
-                <input type="text" placeholder="Tên trường đã tốt nghiệp" className={inputClasses} value={formData.gradSchool} onChange={(e) => setFormData({ ...formData, gradSchool: e.target.value })} />
+                <input type="text" placeholder="Tên trường đã tốt nghiệp" className={inputClasses} style={{ textTransform: 'uppercase' }} value={formData.gradSchool} onChange={(e) => setFormData({ ...formData, gradSchool: e.target.value.toUpperCase() })} />
               </InputGroup>
             </div>
 
