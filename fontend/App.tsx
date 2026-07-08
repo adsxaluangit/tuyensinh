@@ -629,9 +629,13 @@ const App: React.FC = () => {
                 <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest opacity-60">Nguyện vọng thứ nhất</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <InputGroup label="Nghề đào tạo" required className="col-span-2">
-                    {noOccupationsWarning ? (
-                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold">
-                        ⚠ Chưa có nghề đào tạo cho hệ "{formData.educationLevel}" tại "{formData.campus}"
+                    {(!formData.campus || !formData.educationLevel) ? (
+                      <div className="w-full border-[1.5px] border-blue-300 bg-blue-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-blue-700 font-semibold flex items-center gap-2">
+                        <span>ℹ</span> Vui lòng chọn Địa điểm & Hệ đào tạo
+                      </div>
+                    ) : noOccupationsWarning ? (
+                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold flex items-center gap-2">
+                        <span>⚠</span> Chưa có nghề cho hệ "{formData.educationLevel}"
                       </div>
                     ) : (
                       <select className={selectClasses} required value={formData.choice1Major} onChange={(e) => {
@@ -656,9 +660,13 @@ const App: React.FC = () => {
                 <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest opacity-60">Nguyện vọng thứ hai</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <InputGroup label="Nghề đào tạo" className="col-span-2">
-                    {noOccupationsWarning ? (
-                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold">
-                        ⚠ Chưa có nghề đào tạo
+                    {(!formData.campus || !formData.educationLevel) ? (
+                      <div className="w-full border-[1.5px] border-blue-300 bg-blue-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-blue-700 font-semibold flex items-center gap-2">
+                        <span>ℹ</span> Vui lòng chọn Địa điểm & Hệ đào tạo
+                      </div>
+                    ) : noOccupationsWarning ? (
+                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold flex items-center gap-2">
+                        <span>⚠</span> Chưa có nghề đào tạo
                       </div>
                     ) : (
                       <select className={selectClasses} value={formData.choice2Major} onChange={(e) => {
