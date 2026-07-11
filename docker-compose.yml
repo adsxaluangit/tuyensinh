@@ -7,6 +7,7 @@ services:
       POSTGRES_USER: tuyensinh
       POSTGRES_PASSWORD: tuyensinh_password
       POSTGRES_DB: tuyensinh_db
+      PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - tuyensinh-data:/var/lib/postgresql/data
     ports:
@@ -52,13 +53,13 @@ services:
     networks:
       - tuyensinh-net
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:1338/_health"]
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:1338/_health"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 60s
+      retries: 5
+      start_period: 120s
     volumes:
-      - ./uploads:/opt/app/public/uploads    # ảnh lưu trực tiếp ra D:\Github\tuyensinh\uploads\
+      - ./uploads:/opt/app/public/uploads # ảnh lưu trực tiếp ra D:\Github\tuyensinh\uploads\
 
   frontend:
     build:
@@ -88,20 +89,19 @@ services:
       POSTGRES_DB: tuyensinh_db
     volumes:
       - backup-data:/backups
-      - ./uploads:/uploads:ro               # backup ảnh/file Strapi (read-only)
-      - ./backup-files:/backups/host         # lưu backup ra thư mục host
+      - ./uploads:/uploads:ro # backup ảnh/file Strapi (read-only)
+      - ./backup-files:/backups/host # lưu backup ra thư mục host
     ports:
-      - "8090:8080"                          # HTTP trigger: POST /backup, GET /status
+      - "8090:8080" # HTTP trigger: POST /backup, GET /status
     depends_on:
       - db
     networks:
       - tuyensinh-net
 
 volumes:
-  tuyensinh-data:
-  # backend-uploads: (đã chuyển sang bind mount ./uploads)
-  backup-data:
+  tuyensinh-data: # backend-uploads: (đã chuyển sang bind mount ./uploads)
 
+  backup-data:
 
 networks:
   tuyensinh-net:
