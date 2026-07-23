@@ -368,7 +368,7 @@ const App: React.FC = () => {
           <FormSection title="THÔNG TIN THÍ SINH">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <InputGroup label="Họ và tên" required>
-                <input type="text" required placeholder="Nhập họ và tên" className={inputClasses} value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value })} />
+                <input type="text" required placeholder="Nhập họ và tên" className={inputClasses} style={{ textTransform: 'uppercase' }} value={formData.fullName} onChange={(e) => setFormData({ ...formData, fullName: e.target.value.toUpperCase() })} />
               </InputGroup>
               <InputGroup label="Ngày sinh" required>
                 <DateSelector
@@ -629,9 +629,13 @@ const App: React.FC = () => {
                 <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest opacity-60">Nguyện vọng thứ nhất</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <InputGroup label="Nghề đào tạo" required className="col-span-2">
-                    {noOccupationsWarning ? (
-                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold">
-                        ⚠ Chưa có nghề đào tạo cho hệ "{formData.educationLevel}" tại "{formData.campus}"
+                    {(!formData.campus || !formData.educationLevel) ? (
+                      <div className="w-full border-[1.5px] border-blue-300 bg-blue-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-blue-700 font-semibold flex items-center gap-2">
+                        <span>ℹ</span> Vui lòng chọn Địa điểm & Hệ đào tạo
+                      </div>
+                    ) : noOccupationsWarning ? (
+                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold flex items-center gap-2">
+                        <span>⚠</span> Chưa có nghề cho hệ "{formData.educationLevel}"
                       </div>
                     ) : (
                       <select className={selectClasses} required value={formData.choice1Major} onChange={(e) => {
@@ -656,9 +660,13 @@ const App: React.FC = () => {
                 <h3 className="text-xs font-black text-blue-900 uppercase tracking-widest opacity-60">Nguyện vọng thứ hai</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <InputGroup label="Nghề đào tạo" className="col-span-2">
-                    {noOccupationsWarning ? (
-                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold">
-                        ⚠ Chưa có nghề đào tạo
+                    {(!formData.campus || !formData.educationLevel) ? (
+                      <div className="w-full border-[1.5px] border-blue-300 bg-blue-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-blue-700 font-semibold flex items-center gap-2">
+                        <span>ℹ</span> Vui lòng chọn Địa điểm & Hệ đào tạo
+                      </div>
+                    ) : noOccupationsWarning ? (
+                      <div className="w-full border-[1.5px] border-orange-300 bg-orange-50 rounded-[0.8rem] px-4 py-2.5 text-sm text-orange-700 font-semibold flex items-center gap-2">
+                        <span>⚠</span> Chưa có nghề đào tạo
                       </div>
                     ) : (
                       <select className={selectClasses} value={formData.choice2Major} onChange={(e) => {
@@ -685,7 +693,7 @@ const App: React.FC = () => {
                 <input type="text" placeholder="Ví dụ: 2024" className={inputClasses} value={formData.gradYear} onChange={(e) => setFormData({ ...formData, gradYear: e.target.value })} />
               </InputGroup>
               <InputGroup label="Trường tốt nghiệp">
-                <input type="text" placeholder="Tên trường đã tốt nghiệp" className={inputClasses} value={formData.gradSchool} onChange={(e) => setFormData({ ...formData, gradSchool: e.target.value })} />
+                <input type="text" placeholder="Tên trường đã tốt nghiệp" className={inputClasses} style={{ textTransform: 'uppercase' }} value={formData.gradSchool} onChange={(e) => setFormData({ ...formData, gradSchool: e.target.value.toUpperCase() })} />
               </InputGroup>
             </div>
 
@@ -764,7 +772,7 @@ const App: React.FC = () => {
               {showDiploma && (
                 <FileUpload label="Bằng tốt nghiệp/GCN tốt nghiệp tạm thời" required placeholderImage={files.diploma || "/assets/diploma.png"} helperText={`- Liên thông Cao đẳng: nộp bổ sung bằng Trung cấp\n- Liên thông Trung cấp: nộp bổ sung bằng Sơ cấp`} onFileChange={(b64) => setFiles({ ...files, diploma: b64 })} />
               )}
-              <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "/assets/transcript.png"} onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
+              <FileUpload label="Học bạ THPT/THCS" required placeholderImage={files.tempCert || "/assets/transcript.png"} helperText="Chụp ảnh bảng điểm năm cuối cấp" onFileChange={(b64) => setFiles({ ...files, tempCert: b64 })} />
             </div>
           </FormSection>
 

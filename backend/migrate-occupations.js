@@ -16,8 +16,8 @@ async function migrate() {
         await pgClient.connect();
         console.log('Connected to PostgreSQL (tuyensinh_db)');
 
-        // Load Excel
-        const workbook = XLSX.readFile(path.join(__dirname, '..', 'Mau_cau_hinh_hoc_phi.xlsx'));
+        const fileName = process.argv[2] || 'Mau_cau_hinh_hoc_phi11.xlsx';
+        const workbook = XLSX.readFile(path.join(__dirname, '..', fileName));
         const excelData = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
 
         // 1. Map existing Campuses and Levels

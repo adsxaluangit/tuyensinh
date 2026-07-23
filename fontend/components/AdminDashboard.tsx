@@ -435,6 +435,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [backupToast, setBackupToast] = useState<{ type: 'success' | 'error'; message: string; file?: string } | null>(null);
 
+  // --- Import Excel hồ sơ ---
+  const importFileRef = useRef<HTMLInputElement>(null);
+
   const showBackupToast = (type: 'success' | 'error', message: string, file?: string) => {
     setBackupToast({ type, message, file });
     setTimeout(() => setBackupToast(null), 5000);
@@ -465,7 +468,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       alert('Bạn không có quyền truy cập chức năng này!');
       return;
     }
-    if (user?.role === 'Kế toán' && tab !== 'tuition' && tab !== 'submissions') {
+    if (user?.role === 'Kế toán' && tab !== 'tuition') {
       alert('Bạn không có quyền truy cập chức năng này!');
       return;
     }
@@ -1581,7 +1584,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         <div class="student-info">
           <div><span class="info-label">Người nộp:</span><span class="info-value">${s.fullName}</span></div>
           <div><span class="info-label">Mã số (CCCD):</span><span class="info-value">${s.idNumber}</span></div>
-          <div><span class="info-label">Ngành học:</span><span class="info-value">${s.choice1Specialty}</span></div>
+          <div><span class="info-label">Nghề đào tạo:</span><span class="info-value">${s.choice1Major}</span></div>
         </div>
         <table>
           <thead>
@@ -1619,6 +1622,89 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         </div>
       </div>
     `;
+
+    const getFormattedDate = (dateStr: any) => {
+      if (!dateStr) return '......../......../................';
+      try {
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '......../......../................';
+        return String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') + '/' + d.getFullYear();
+      } catch {
+        return '......../......../................';
+      }
+    };
+
+    const renderHealthInsuranceForm = () => `
+      <div class="page-wrapper page-break">
+        <div class="form-header" style="text-align: center; margin-bottom: 20px; font-family: 'Times New Roman', serif;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+            <div style="width: 40%; text-align: center; font-size: 11pt;"></div>
+            <div style="width: 60%; text-align: center;">
+              <div style="font-style: italic; font-size: 11pt;">Mẫu số: 02<br>Ban hành kèm theo Nghị định số 188/2025/NĐ-CP</div>
+            </div>
+          </div>
+          <div style="font-weight: bold; font-size: 13pt; margin-top: 10px;">CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+          <div style="font-weight: bold; font-size: 13pt; text-decoration: underline; margin-bottom: 20px;">Độc lập - Tự do - Hạnh phúc</div>
+          <div style="font-weight: bold; font-size: 16pt; margin-top: 15px;">TỜ KHAI</div>
+          <div style="font-weight: bold; font-size: 13pt; margin-top: 5px;">THAM GIA, ĐIỀU CHỈNH THÔNG TIN BẢO HIỂM Y TẾ</div>
+          <div style="font-size: 12pt; margin-top: 10px;">Mã số bảo hiểm y tế: ...........................................................</div>
+        </div>
+        
+        <div class="form-content" style="line-height: 1.8; font-size: 12pt; font-family: 'Times New Roman', serif;">
+          <div style="font-weight: bold; margin-bottom: 10px; font-size: 13pt;">I. Đăng ký tham gia bảo hiểm y tế lần đầu</div>
+          
+          <div style="display: flex;">
+            <div style="flex: 6;">[01]. Họ và tên: <b>${(s.fullName || '').toUpperCase()}</b></div>
+            <div style="flex: 4;">[02]. Giới tính: <b>${s.gender || '........'}</b></div>
+          </div>
+          
+          <div style="display: flex;">
+            <div style="flex: 6;">[03]. Ngày, tháng, năm sinh: <b>${getFormattedDate(s.dob)}</b></div>
+            <div style="flex: 4;">[04]. Số CCCD: <b>${s.idNumber || '................................'}</b></div>
+          </div>
+          
+          <div style="display: flex;">
+            <div style="flex: 6;">[05]. Dân tộc: <b>${s.ethnicity || '................'}</b></div>
+            <div style="flex: 4;">[06]. Số điện thoại: <b>${s.phone || '................................'}</b></div>
+          </div>
+          
+          <div>[07]. Số nhà, đường/phố, thôn/xóm: <b>${s.addressDetails || '........................................................................'}</b></div>
+          
+          <div style="display: flex;">
+            <div style="flex: 5;">[7.1]. Xã, phường, đặc khu: <b>${s.district || '........................'}</b></div>
+            <div style="flex: 5;">[7.2]. Tỉnh, thành phố: <b>${s.province || '........................'}</b></div>
+          </div>
+          
+          <div>[08]. Địa chỉ email: <b>${s.email || '....................................................................................'}</b></div>
+          
+          <div style="display: flex;">
+            <div style="flex: 5;">[9]. Số Tài khoản Ngân hàng: ........................</div>
+            <div style="flex: 5;">[10]. Tên Ngân hàng: ........................................</div>
+          </div>
+          
+          <div>[11]. Nơi đăng ký khám, chữa bệnh ban đầu: ........................................................................</div>
+          
+          <div style="display: flex; margin-top: 30px; text-align: center;">
+            <div style="flex: 1; font-weight: bold; font-size: 13pt;">XÁC NHẬN CỦA ĐƠN VỊ</div>
+            <div style="flex: 1;">
+              <div style="font-style: italic; margin-bottom: 5px;">......, ngày ${now.getDate().toString().padStart(2, '0')} tháng ${(now.getMonth() + 1).toString().padStart(2, '0')} năm ${now.getFullYear()}</div>
+              <div style="font-weight: bold; font-size: 13pt;">Người kê khai</div>
+              <div style="font-style: italic; margin-bottom: 60px;">(Ký, ghi rõ họ, tên)</div>
+              <div style="font-weight: bold;">${s.fullName || ''}</div>
+            </div>
+          </div>
+          
+          <div style="margin-top: 50px; font-size: 11pt; font-style: italic;">
+            <div style="font-weight: bold; text-decoration: underline;">Ghi chú:</div>
+            <div>- Mã số bảo hiểm y tế tra tại địa chỉ: https://baohiemxahoi.gov.vn</div>
+            <div>- Trường hợp triển khai tờ khai điện tử:</div>
+            <div style="padding-left: 15px;">+ Các trường thông tin đã được kết nối với cơ sở dữ liệu Quốc gia về dân cư, Cơ sở dữ liệu Quốc gia về bảo hiểm, các cơ sở dữ liệu khác, ..... trên cổng dịch vụ công Quốc gia thì thông tin được tự động điền vào tờ khai điện tử. Cá nhân chỉ điền thông tin chưa có trong cơ sở dữ liệu.</div>
+            <div style="padding-left: 15px; margin-top: 5px;">+ Trường hợp kê khai sử dụng Tài khoản định danh điện tử (VneID) mức độ 2 để đăng nhập vào Cổng dịch vụ công Quốc gia để giải quyết các thủ tục trên môi trường điện tử thì không phải ký tên vào tờ khai.</div>
+          </div>
+        </div>
+      </div>
+    `;
+
     printWindow.document.write(`
       <html>
         <head>
@@ -1653,6 +1739,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             .sig-box { width: 45%; }
             .sig-title { font-weight: bold; margin-bottom: 100px; }
             .sig-name { font-weight: bold; font-size: 11pt; }
+            .page-break { page-break-before: always; }
             @media print { body { -webkit-print-color-adjust: exact; } .page-wrapper { margin: 0; border: none; } }
           </style>
         </head>
@@ -1662,6 +1749,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div class="cut-line"></div>
             ${renderReceiptHTML(2)}
           </div>
+          ${renderHealthInsuranceForm()}
           <script>
             window.onload = () => { window.print(); window.onafterprint = () => window.close(); };
           </script>
@@ -1923,6 +2011,251 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     XLSX.writeFile(wb, 'Mau_cau_hinh_hoc_phi.xlsx');
   };
 
+  // ============================================================
+  // Import hồ sơ từ Excel
+  // ============================================================
+  const handleDownloadRegistrationTemplate = () => {
+    const wb = XLSX.utils.book_new();
+
+    const headers = [
+      'Họ và tên (*)', 'Ngày sinh (*) DD/MM/YYYY', 'Nơi sinh (*)', 'Giới tính (*) Nam/Nữ/Khác',
+      'Dân tộc (*)', 'Số CCCD (*) 12 số', 'Ngày cấp CCCD (*) DD/MM/YYYY', 'Nơi cấp',
+      'Tỉnh/TP thường trú (*)', 'Xã/Phường/Thị trấn (*)', 'Thôn/Xóm/Số nhà (*)',
+      'Số điện thoại (*) 10 số', 'Email (*)',
+      'Họ tên phụ huynh', 'SĐT phụ huynh',
+      'Địa điểm nhập học (*)', 'Hệ đào tạo (*)',
+      'Nghề đào tạo NV1 (*)', 'Mã nghề NV1 (*)',
+      'Năm tốt nghiệp', 'Trường tốt nghiệp'
+    ];
+
+    const sampleRow = [
+      'NGUYỄN VĂN A', '15/06/2005', 'TP. Hải Phòng', 'Nam',
+      'Kinh', '123456789012', '10/03/2021', 'Cục CS QLHC về TTXH',
+      'TP. Hải Phòng', 'Phường Lê Chân', 'Số 5 đường Trần Phú',
+      '0987654321', 'nguyenvana@gmail.com',
+      'Nguyễn Thị B', '0912345678',
+      campusConfigs[0]?.name || 'Hải Phòng',
+      educationLevelConfigs[0]?.name || 'Cao đẳng',
+      tuitionConfigs[0]?.name || 'Công nghệ thông tin',
+      tuitionConfigs[0]?.code || 'K7648020101',
+      '2023', 'THPT LÊ HỒNG PHONG'
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet([headers, sampleRow]);
+    ws['!cols'] = headers.map(() => ({ wch: 26 }));
+    XLSX.utils.book_append_sheet(wb, ws, 'Danh_sach_ho_so');
+
+    // Sheet hướng dẫn
+    const campusList = campusConfigs.map(c => c.name).join(' / ') || 'Hải Phòng / Nam Đồng / Đinh Nhu';
+    const levelList = educationLevelConfigs.map(l => l.name).join(' / ') || 'Cao đẳng / Trung cấp / Sơ cấp';
+    const guide: any[][] = [
+      ['TRƯỜNG DỮ LIỆU', 'YÊU CẦU', 'GIÁ TRỊ HỢP LỆ'],
+      ['Họ và tên', 'Bắt buộc — Viết HOA', 'VD: NGUYỄN VĂN A'],
+      ['Ngày sinh', 'Bắt buộc — DD/MM/YYYY', 'VD: 15/06/2005'],
+      ['Nơi sinh', 'Bắt buộc — Tên tỉnh/TP', 'VD: TP. Hải Phòng'],
+      ['Giới tính', 'Bắt buộc', 'Nam / Nữ / Khác'],
+      ['Dân tộc', 'Bắt buộc', 'VD: Kinh'],
+      ['Số CCCD', 'Bắt buộc — Đúng 12 chữ số', 'VD: 123456789012'],
+      ['Ngày cấp CCCD', 'Bắt buộc — DD/MM/YYYY', 'VD: 10/03/2021'],
+      ['Nơi cấp', 'Tùy chọn', 'Cục CS QLHC về TTXH'],
+      ['Tỉnh/TP thường trú', 'Bắt buộc', 'VD: TP. Hải Phòng'],
+      ['Xã/Phường/Thị trấn', 'Bắt buộc', 'VD: Phường Lê Chân'],
+      ['Thôn/Xóm/Số nhà', 'Bắt buộc', 'VD: Số 5 đường Trần Phú'],
+      ['Số điện thoại', 'Bắt buộc — Đúng 10 chữ số', 'VD: 0987654321'],
+      ['Email', 'Bắt buộc', 'VD: example@gmail.com'],
+      ['Họ tên phụ huynh', 'Tùy chọn', ''],
+      ['SĐT phụ huynh', 'Tùy chọn — 10 số', ''],
+      ['Địa điểm nhập học', 'Bắt buộc — Phải khớp CHÍNH XÁC', campusList],
+      ['Hệ đào tạo', 'Bắt buộc — Phải khớp CHÍNH XÁC', levelList],
+      ['Nghề đào tạo NV1', 'Bắt buộc — Tên nghề', 'VD: Công nghệ thông tin'],
+      ['Mã nghề NV1', 'Bắt buộc — Mã nghề', 'VD: K7648020101'],
+      ['Năm tốt nghiệp', 'Tùy chọn', 'VD: 2023'],
+      ['Trường tốt nghiệp', 'Tùy chọn — Viết HOA', 'VD: THPT LÊ HỒNG PHONG'],
+      [],
+      ['⚠ LƯU Ý', 'Các cột có dấu (*) là bắt buộc. Dữ liệu bắt đầu từ dòng 2.', ''],
+      ['', 'CCCD đã tồn tại trong hệ thống sẽ bị BỎ QUA (không ghi đè).', ''],
+    ];
+    const wsGuide = XLSX.utils.aoa_to_sheet(guide);
+    wsGuide['!cols'] = [{ wch: 22 }, { wch: 50 }, { wch: 55 }];
+    XLSX.utils.book_append_sheet(wb, wsGuide, 'Huong_dan');
+
+    XLSX.writeFile(wb, 'Mau_Import_HoSo.xlsx');
+  };
+
+  const handleImportExcel = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ''; // reset để có thể chọn lại cùng file
+
+    if (!window.confirm(`Bạn có chắc muốn import file "${file.name}"?\n\nHệ thống sẽ đọc, kiểm tra và tạo hồ sơ mới.\nCCCD đã có trong hệ thống sẽ bị BỎ QUA.`)) return;
+
+    setIsLoading(true);
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const wb = XLSX.read(arrayBuffer, { type: 'array' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const allRows: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+
+      // Bỏ hàng header, lọc hàng rỗng
+      const dataRows = allRows.slice(1).filter(row => row.some((c: any) => String(c).trim() !== ''));
+
+      if (dataRows.length === 0) {
+        alert('File không có dữ liệu! Vui lòng kiểm tra lại.');
+        setIsLoading(false);
+        return;
+      }
+
+      let successCount = 0;
+      let skipCount = 0;
+      let failCount = 0;
+      const errors: string[] = [];
+
+      // Helper: chuyển DD/MM/YYYY hoặc Excel serial → ISO date
+      const parseDate = (val: any): string => {
+        if (!val) return '';
+        const str = String(val).trim();
+        const match = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+        if (match) return `${match[3]}-${match[2].padStart(2, '0')}-${match[1].padStart(2, '0')}`;
+        if (/^\d{4}-\d{2}-\d{2}/.test(str)) return str.slice(0, 10);
+        // Excel serial date number
+        const num = Number(val);
+        if (!isNaN(num) && num > 1000) {
+          const d = new Date(Math.round((num - 25569) * 86400 * 1000));
+          return d.toISOString().slice(0, 10);
+        }
+        return str;
+      };
+
+      for (let i = 0; i < dataRows.length; i++) {
+        const row = dataRows[i];
+        const [
+          fullName, dobRaw, pob, gender,
+          ethnicity, idNumber, issueDateRaw, issuePlace,
+          province, district, addressDetails,
+          phone, email,
+          parentName, parentPhone,
+          campusName, levelName,
+          choice1Major, choice1Specialty,
+          gradYear, gradSchool
+        ] = row.map((c: any) => String(c ?? '').trim());
+
+        const lineNum = i + 2;
+
+        // Validate bắt buộc
+        if (!fullName || !idNumber || !campusName || !levelName || !phone) {
+          errors.push(`Dòng ${lineNum}: Thiếu thông tin bắt buộc (Họ tên / CCCD / Địa điểm / Hệ / SĐT).`);
+          failCount++;
+          continue;
+        }
+
+        if (!/^\d{12}$/.test(idNumber)) {
+          errors.push(`Dòng ${lineNum}: CCCD "${idNumber}" không hợp lệ (phải đúng 12 chữ số).`);
+          failCount++;
+          continue;
+        }
+
+        // Map cơ sở
+        const campusObj = campusConfigs.find(c =>
+          c.name.trim().toLowerCase() === campusName.toLowerCase()
+        ) as any;
+        if (!campusObj) {
+          const valid = campusConfigs.map(c => c.name).join(', ');
+          errors.push(`Dòng ${lineNum}: Địa điểm "${campusName}" không hợp lệ. Hợp lệ: [${valid}].`);
+          failCount++;
+          continue;
+        }
+
+        // Map hệ đào tạo
+        const levelObj = educationLevelConfigs.find(l =>
+          l.name.trim().toLowerCase() === levelName.toLowerCase()
+        ) as any;
+        if (!levelObj) {
+          const valid = educationLevelConfigs.map(l => l.name).join(', ');
+          errors.push(`Dòng ${lineNum}: Hệ đào tạo "${levelName}" không hợp lệ. Hợp lệ: [${valid}].`);
+          failCount++;
+          continue;
+        }
+
+        // Kiểm tra CCCD trùng
+        try {
+          const existing = await api.findRegistrationByCCCD(idNumber);
+          if (existing) {
+            errors.push(`Dòng ${lineNum}: CCCD "${idNumber}" đã tồn tại → bỏ qua.`);
+            skipCount++;
+            continue;
+          }
+        } catch { /* bỏ qua lỗi check trùng */ }
+
+        const password = Math.random().toString(36).slice(-6).toUpperCase();
+
+        const submissionData: any = {
+          fullName: fullName.toUpperCase(),
+          dob: parseDate(dobRaw),
+          pob,
+          gender,
+          ethnicity,
+          idNumber,
+          issueDate: parseDate(issueDateRaw),
+          issuePlace: issuePlace || 'Cục CS QLHC về TTXH',
+          province,
+          district,
+          addressDetails,
+          phone: phone.replace(/\D/g, ''),
+          email,
+          parentName,
+          parentPhone: parentPhone.replace(/\D/g, ''),
+          campus: campusObj.numericId || campusObj.id,
+          educationLevel: levelObj.numericId || levelObj.id,
+          choice1Major,
+          choice1Specialty,
+          gradYear: String(gradYear),
+          gradSchool: gradSchool.toUpperCase(),
+          status: 'Chờ Duyệt',
+          recipient: 'Thí sinh',
+          deliveryAddress: 'Địa chỉ hộ khẩu thường trú',
+          deliveryAddressDetails: '',
+          tuitionAmount: 0,
+          healthAmount: 0,
+          comprehensiveAmount: 0,
+          uniformAmount: 0,
+          tuitionPaidAmount: 0,
+          isHealthSelected: true,
+          isComprehensiveSelected: true,
+          isUniformSelected: true,
+          grades: {},
+          password,
+        };
+
+        try {
+          await api.submitRegistration(submissionData);
+          successCount++;
+        } catch (err) {
+          errors.push(`Dòng ${lineNum}: Lỗi khi lưu hồ sơ "${fullName}".`);
+          failCount++;
+        }
+      }
+
+      setIsLoading(false);
+      logAction('EXPORT', `Import Excel hồ sơ: ✅ ${successCount} thành công, ⏭ ${skipCount} bỏ qua, ❌ ${failCount} thất bại`);
+
+      alert(
+        `IMPORT HOÀN TẤT:\n` +
+        `✅ Thành công: ${successCount} hồ sơ\n` +
+        `⏭ Bỏ qua (CCCD trùng): ${skipCount}\n` +
+        `❌ Thất bại: ${failCount}` +
+        (errors.length > 0 ? `\n\nChi tiết lỗi (tối đa 10):\n${errors.slice(0, 10).join('\n')}` : '')
+      );
+
+      if (successCount > 0) fetchData();
+
+    } catch (err) {
+      setIsLoading(false);
+      console.error('Lỗi import Excel:', err);
+      alert('Lỗi khi đọc file Excel. Vui lòng dùng file .xlsx đúng định dạng.');
+    }
+  };
+
   const getAdmissionNoticeHtml = (template: AdmissionTemplate, submission: any, docNumber?: string) => {
     const now = new Date();
     const currentDay = now.getDate().toString().padStart(2, '0');
@@ -2113,6 +2446,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   };
 
   const isAdmin = user?.role === 'Quản trị viên';
+  const isKetoan = user?.role === 'Kế toán';
   const formatDateValue = (date: any) => {
     if (!date) return '';
     try {
@@ -2146,10 +2480,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             </div>
           </div>
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-            <HorizontalMenuButton active={activeTab === 'submissions'} onClick={() => handleTabChange('submissions')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>} label="Quản lý hồ sơ" />
+            {!isKetoan && <HorizontalMenuButton active={activeTab === 'submissions'} onClick={() => handleTabChange('submissions')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>} label="Quản lý hồ sơ" />}
             <HorizontalMenuButton active={activeTab === 'tuition'} onClick={() => handleTabChange('tuition')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2" /></svg>} label="Quản lý học phí" />
-            <HorizontalMenuButton active={activeTab === 'admission-templates'} onClick={() => handleTabChange('admission-templates')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>} label="Mẫu văn bản" />
-            <HorizontalMenuButton active={activeTab === 'tuition-config'} onClick={() => handleTabChange('tuition-config')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} label="Cài đặt" />
+            {!isKetoan && <HorizontalMenuButton active={activeTab === 'admission-templates'} onClick={() => handleTabChange('admission-templates')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" /></svg>} label="Mẫu văn bản" />}
+            {!isKetoan && <HorizontalMenuButton active={activeTab === 'tuition-config'} onClick={() => handleTabChange('tuition-config')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>} label="Cài đặt" />}
             {isAdmin && <HorizontalMenuButton active={activeTab === 'roles'} onClick={() => handleTabChange('roles')} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" /></svg>} label="Phân quyền" />}
             {isAdmin && <HorizontalMenuButton active={activeTab === 'logs'} onClick={() => { handleTabChange('logs'); fetchLogs(); }} icon={<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" /></svg>} label="Nhật ký" />}
             {isAdmin && (
@@ -2233,7 +2567,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               <button onClick={handleExportExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
               <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
             </div>
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Thao tác nhanh:</span><ActionButton label="Tiếp nhận" color="blue" onClick={() => updateStatusForSelected(SubmissionStatus.RECEIVED)} />{user?.role !== 'Cán bộ tiếp nhận' && (<><ActionButton label="Duyệt trúng tuyển" color="green" onClick={() => updateStatusForSelected(SubmissionStatus.APPROVED)} /><ActionButton label="Khóa hồ sơ" color="slate" onClick={() => updateStatusForSelected(SubmissionStatus.LOCKED)} /><ActionButton label="Hủy trạng thái" color="orange" onClick={() => updateStatusForSelected(SubmissionStatus.PENDING)} /></>)}{isAdmin && <ActionButton label="Xóa hồ sơ" color="red" onClick={handleDeleteSelected} />}</div>
+            {!isKetoan && <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Thao tác nhanh:</span><ActionButton label="Tiếp nhận" color="blue" onClick={() => updateStatusForSelected(SubmissionStatus.RECEIVED)} />{user?.role !== 'Cán bộ tiếp nhận' && (<><ActionButton label="Duyệt trúng tuyển" color="green" onClick={() => updateStatusForSelected(SubmissionStatus.APPROVED)} /><ActionButton label="Khóa hồ sơ" color="slate" onClick={() => updateStatusForSelected(SubmissionStatus.LOCKED)} /><ActionButton label="Hủy trạng thái" color="orange" onClick={() => updateStatusForSelected(SubmissionStatus.PENDING)} /></>)}{isAdmin && <ActionButton label="Xóa hồ sơ" color="red" onClick={handleDeleteSelected} />}{isAdmin && (<><div className="w-px h-5 bg-gray-200 mx-1 shrink-0" /><button onClick={handleDownloadRegistrationTemplate} title="Tải file Excel mẫu để nhập hồ sơ" className="px-4 py-1.5 rounded-lg border text-[11px] font-black uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button><button onClick={() => importFileRef.current?.click()} disabled={isLoading} title="Import danh sách hồ sơ từ file Excel" className="px-4 py-1.5 rounded-lg border text-[11px] font-black uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100 disabled:opacity-50 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4 4l-4-4m0 0l4-4m-4 4V4" /></svg>{isLoading ? 'Đang import...' : 'Import Excel'}</button><input ref={importFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} /></>)}</div>}
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
@@ -2251,7 +2585,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                         <td className="px-4 py-4"><span className="bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-purple-100 uppercase whitespace-nowrap tracking-wider">{s.educationLevel}</span></td>
                         <td className="px-4 py-4"><div className="flex flex-col"><span className="text-gray-950 font-black text-[11px] leading-tight block max-w-[180px] uppercase">{s.choice1Major}</span><span className="text-gray-400 text-[9px] font-bold uppercase mt-0.5">Mã nghề: {s.choice1Specialty}</span></div></td>
                         <td className="px-4 py-4 text-center"><span className={`inline-block px-3 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-widest whitespace-nowrap ${getStatusStyle(s.status)}`}>{s.status}</span></td>
-                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => handleViewDetail(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button><button onClick={() => handleViewDetail(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button><button onClick={() => handleDeleteSingle(s.docId)} className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-all" title="Xóa hồ sơ"><DeleteIcon /></button></div></td>
+                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => handleViewDetail(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button>{!isKetoan && <button onClick={() => handleViewDetail(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button>}{isAdmin && <button onClick={() => handleDeleteSingle(s.docId)} className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-all" title="Xóa hồ sơ"><DeleteIcon /></button>}</div></td>
                       </tr>
                     ))}
                   </tbody>

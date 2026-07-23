@@ -1,5 +1,5 @@
 
-const STRAPI_URL = (import.meta.env.PROD && !window.location.hostname.includes('localhost')) 
+const STRAPI_URL = import.meta.env.PROD 
     ? '' 
     : (import.meta.env.VITE_STRAPI_URL || 'http://localhost:1337');
 
