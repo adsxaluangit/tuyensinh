@@ -305,7 +305,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [tuitionPagination, setTuitionPagination] = useState({ page: 1, pageSize: 25 });
   const [tuitionTotalCount, setTuitionTotalCount] = useState(0);
   const [tuitionSubTab, setTuitionSubTab] = useState<'campuses' | 'education-levels' | 'majors' | 'health' | 'comprehensive' | 'uniform' | 'bank'>('campuses');
-  const [bankConfig, setBankConfig] = useState({ bankId: '', accountNumber: '', accountName: '', branch: '' });
+  type BankEntry = { bankId: string; accountNumber: string; accountName: string; branch: string };
+  const CAMPUS_BANK_TABS = [
+    { key: 'hp' as const, label: 'Cơ sở Hải Phòng (Đà Nẵng 498)', color: 'blue' },
+    { key: 'nd' as const, label: 'Cơ sở Nam Đồng', color: 'violet' },
+    { key: 'dn' as const, label: 'Cơ sở Đinh Nhu', color: 'emerald' },
+  ];
+  const emptyBank = (): BankEntry => ({ bankId: '', accountNumber: '', accountName: '', branch: '' });
+  const [bankConfigs, setBankConfigs] = useState<Record<string, BankEntry>>({ hp: emptyBank(), nd: emptyBank(), dn: emptyBank() });
+  const [activeBankTab, setActiveBankTab] = useState<'hp'|'nd'|'dn'>('hp');
   const [isSavingBank, setIsSavingBank] = useState(false);
   const [bankSettingIds, setBankSettingIds] = useState<Record<string,string>>({});
   const [admissionSubTab, setAdmissionSubTab] = useState<'Hải Phòng' | 'Nam Đồng' | 'Đinh Nhu' | 'Thu học phí'>('Hải Phòng');
@@ -587,16 +595,22 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       const seqSetting = settings.find((s: any) => s.key === 'global_admission_seq');
       if (seqSetting) localStorage.setItem('global_admission_seq', seqSetting.value);
 
-      // Load bank config
-      const bankKeys = ['bank_id', 'bank_account_number', 'bank_account_name', 'bank_branch'];
+      // Load bank config theo từng cơ sở
+      const campusSuffixes = ['hp', 'nd', 'dn'];
       const ids: Record<string, string> = {};
-      const loaded: any = {};
-      bankKeys.forEach(k => {
-        const s = settings.find((x: any) => x.key === k);
-        if (s) { loaded[k] = s.value || ''; ids[k] = s.documentId || s.id; }
-        else loaded[k] = '';
+      const newConfigs: Record<string, any> = { hp: emptyBank(), nd: emptyBank(), dn: emptyBank() };
+      campusSuffixes.forEach(suffix => {
+        const fields: Record<string, string> = { bankId: `bank_id_${suffix}`, accountNumber: `bank_account_number_${suffix}`, accountName: `bank_account_name_${suffix}`, branch: `bank_branch_${suffix}` };
+        Object.entries(fields).forEach(([field, key]) => {
+          const found = settings.find((x: any) => x.key === key);
+          // fallback sang key cũ cho cơ sở hp
+          const fallbackKey = field === 'bankId' ? 'bank_id' : field === 'accountNumber' ? 'bank_account_number' : field === 'accountName' ? 'bank_account_name' : 'bank_branch';
+          const fallback = suffix === 'hp' ? settings.find((x: any) => x.key === fallbackKey) : null;
+          const src = found || fallback;
+          if (src) { newConfigs[suffix][field] = src.value || ''; ids[`${key}`] = src.documentId || src.id; }
+        });
       });
-      setBankConfig({ bankId: loaded.bank_id, accountNumber: loaded.bank_account_number, accountName: loaded.bank_account_name, branch: loaded.bank_branch });
+      setBankConfigs(newConfigs as any);
       setBankSettingIds(ids);
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -1630,12 +1644,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div class="sig-title">Người nộp tiền</div>
             <div class="sig-name" style="font-weight: normal; font-style: italic; font-size: 10pt">(Ký, ghi rõ họ tên)</div>
           </div>
-          ${bankConfig.bankId && bankConfig.accountNumber && remaining > 0 ? `
+          ${(() => { const ck = ((n:string)=>{ const l=(n||'').toLowerCase(); if(l.includes('đinh nhu')) return 'dn'; if(l.includes('nam đồng')) return 'nd'; return 'hp'; })((s as any).campus); const bc = bankConfigs[ck]; return bc.bankId && bc.accountNumber && remaining > 0 ? `
           <div class="qr-box">
-            <img src="https://img.vietqr.io/image/${bankConfig.bankId}-${bankConfig.accountNumber}-compact.png?amount=${remaining}&addInfo=CCCD%20${s.idNumber}&accountName=${encodeURIComponent(bankConfig.accountName)}" alt="QR chuyển khoản" style="width:85px;height:85px;object-fit:contain;" onerror="this.parentElement.style.display='none'" />
+            <img src="https://img.vietqr.io/image/${bc.bankId}-${bc.accountNumber}-compact.png?amount=${remaining}&addInfo=CCCD%20${s.idNumber}&accountName=${encodeURIComponent(bc.accountName)}" alt="QR chuyển khoản" style="width:85px;height:85px;object-fit:contain;" onerror="this.parentElement.style.display='none'" />
             <div style="font-size:7.5pt;text-align:center;margin-top:3px;color:#444;font-style:italic;">Quét QR để thanh toán</div>
             <div style="font-size:6pt;text-align:center;margin-top:4px;color:#c00;font-style:italic;line-height:1.4;">⚠ Kiểm tra kỹ thông tin trước khi chuyển.<br/>Nhà trường không chịu trách nhiệm nếu chuyển sai.</div>
-          </div>` : ''}
+          </div>` : ''; })()}
           <div class="sig-box">
             <div class="sig-title">${template.footerTitle}</div>
             <div class="sig-name">${user?.fullName || template.footerName}</div>
@@ -3015,133 +3029,135 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 </div>
               </>
             ) : tuitionSubTab === 'bank' ? (
-              <div className="max-w-2xl">
-                <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-8 space-y-6">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
-                      <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
-                    </div>
-                    <div>
-                      <h3 className="font-black text-gray-900 text-lg">Thông tin tài khoản ngân hàng</h3>
-                      <p className="text-gray-400 text-xs">Dùng để tạo mã QR chuyển khoản trên hóa đơn học phí</p>
-                    </div>
-                  </div>
+              <div className="max-w-2xl space-y-4">
+                {/* Tabs chọn cơ sở */}
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-2xl">
+                  {CAMPUS_BANK_TABS.map(tab => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setActiveBankTab(tab.key)}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all ${activeBankTab === tab.key ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
 
-                  <div className="grid grid-cols-1 gap-4">
-                    <div>
-                      <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Ngân hàng</label>
-                      <select
-                        className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/20"
-                        value={bankConfig.bankId}
-                        onChange={e => setBankConfig(p => ({ ...p, bankId: e.target.value }))}
-                      >
-                        <option value="">-- Chọn ngân hàng --</option>
-                        <option value="VCB">Vietcombank (VCB)</option>
-                        <option value="BIDV">BIDV</option>
-                        <option value="VTB">Vietinbank (VTB)</option>
-                        <option value="AGRIBANK">Agribank</option>
-                        <option value="TCB">Techcombank (TCB)</option>
-                        <option value="MB">MB Bank</option>
-                        <option value="VPB">VPBank</option>
-                        <option value="ACB">ACB</option>
-                        <option value="STB">Sacombank (STB)</option>
-                        <option value="HDB">HDBank</option>
-                        <option value="TPB">TPBank</option>
-                        <option value="MSB">MSB</option>
-                        <option value="OCB">OCB</option>
-                        <option value="SHB">SHB</option>
-                        <option value="SEABANK">SeABank</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Số tài khoản</label>
-                      <input
-                        type="text"
-                        placeholder="Ví dụ: 1234567890"
-                        className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono"
-                        value={bankConfig.accountNumber}
-                        onChange={e => setBankConfig(p => ({ ...p, accountNumber: e.target.value }))}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Tên chủ tài khoản</label>
-                      <input
-                        type="text"
-                        placeholder="Ví dụ: TRUONG CAO DANG HANG HAI VA DUONG THUY I"
-                        className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 uppercase"
-                        value={bankConfig.accountName}
-                        onChange={e => setBankConfig(p => ({ ...p, accountName: e.target.value.toUpperCase() }))}
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Chi nhánh <span className="text-gray-300 font-normal normal-case">(tùy chọn)</span></label>
-                      <input
-                        type="text"
-                        placeholder="Ví dụ: Chi nhánh Hải Phòng"
-                        className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
-                        value={bankConfig.branch}
-                        onChange={e => setBankConfig(p => ({ ...p, branch: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Preview QR */}
-                  {bankConfig.bankId && bankConfig.accountNumber && (
-                    <div className="flex items-center gap-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                      <img
-                        src={`https://img.vietqr.io/image/${bankConfig.bankId}-${bankConfig.accountNumber}-compact.png?amount=100000&addInfo=Preview%20QR&accountName=${encodeURIComponent(bankConfig.accountName)}`}
-                        alt="Preview QR"
-                        className="w-28 h-28 object-contain rounded-xl border border-emerald-200 bg-white"
-                        onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                      />
+                {CAMPUS_BANK_TABS.map(tab => activeBankTab === tab.key && (
+                  <div key={tab.key} className="bg-white rounded-3xl shadow-xl border border-gray-200 p-8 space-y-6">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center border border-emerald-100">
+                        <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                      </div>
                       <div>
-                        <p className="font-black text-emerald-800 text-sm">{bankConfig.accountName || '(Chưa nhập tên)'}</p>
-                        <p className="text-emerald-700 font-mono text-sm mt-0.5">{bankConfig.accountNumber}</p>
-                        <p className="text-emerald-600 text-xs mt-0.5">{bankConfig.bankId}{bankConfig.branch ? ` · ${bankConfig.branch}` : ''}</p>
-                        <p className="text-emerald-500 text-[10px] mt-2 italic">* Đây là QR mẫu với số tiền 100.000đ</p>
+                        <h3 className="font-black text-gray-900 text-lg">{tab.label}</h3>
+                        <p className="text-gray-400 text-xs">Mã QR sẽ tự động dùng tài khoản này khi in hóa đơn cho cơ sở này</p>
                       </div>
                     </div>
-                  )}
 
-                  <button
-                    disabled={isSavingBank}
-                    onClick={async () => {
-                      setIsSavingBank(true);
-                      try {
-                        const allSettings = await api.fetchSystemSettings();
-                        const save = async (key: string, value: string) => {
-                          const existing = allSettings.find((s: any) => s.key === key);
-                          if (existing) {
-                            await api.updateSystemSetting(existing.documentId || existing.id, { value });
-                          } else {
-                            await api.createSystemSetting({ key, value });
-                          }
-                        };
-                        await save('bank_id', bankConfig.bankId);
-                        await save('bank_account_number', bankConfig.accountNumber);
-                        await save('bank_account_name', bankConfig.accountName);
-                        await save('bank_branch', bankConfig.branch);
-                        logAction('EDIT', 'Cập nhật cấu hình tài khoản ngân hàng');
-                        alert('✅ Đã lưu cấu hình ngân hàng thành công!');
-                      } catch {
-                        alert('❌ Lỗi khi lưu. Vui lòng thử lại.');
-                      } finally {
-                        setIsSavingBank(false);
-                      }
-                    }}
-                    className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-sm hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                  >
-                    {isSavingBank ? (
-                      <><svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>Đang lưu...</>
-                    ) : (
-                      <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>Lưu cấu hình ngân hàng</>
+                    <div className="grid grid-cols-1 gap-4">
+                      <div>
+                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Ngân hàng</label>
+                        <select
+                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          value={bankConfigs[tab.key].bankId}
+                          onChange={e => setBankConfigs(p => ({ ...p, [tab.key]: { ...p[tab.key], bankId: e.target.value } }))}
+                        >
+                          <option value="">-- Chọn ngân hàng --</option>
+                          <option value="VCB">Vietcombank (VCB)</option>
+                          <option value="BIDV">BIDV</option>
+                          <option value="VTB">Vietinbank (VTB)</option>
+                          <option value="AGRIBANK">Agribank</option>
+                          <option value="TCB">Techcombank (TCB)</option>
+                          <option value="MB">MB Bank</option>
+                          <option value="VPB">VPBank</option>
+                          <option value="ACB">ACB</option>
+                          <option value="STB">Sacombank (STB)</option>
+                          <option value="HDB">HDBank</option>
+                          <option value="TPB">TPBank</option>
+                          <option value="MSB">MSB</option>
+                          <option value="OCB">OCB</option>
+                          <option value="SHB">SHB</option>
+                          <option value="SEABANK">SeABank</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Số tài khoản</label>
+                        <input type="text" placeholder="Ví dụ: 1234567890"
+                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono"
+                          value={bankConfigs[tab.key].accountNumber}
+                          onChange={e => setBankConfigs(p => ({ ...p, [tab.key]: { ...p[tab.key], accountNumber: e.target.value } }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Tên chủ tài khoản</label>
+                        <input type="text" placeholder="Ví dụ: TRUONG CAO DANG HANG HAI VA DUONG THUY I"
+                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 uppercase"
+                          value={bankConfigs[tab.key].accountName}
+                          onChange={e => setBankConfigs(p => ({ ...p, [tab.key]: { ...p[tab.key], accountName: e.target.value.toUpperCase() } }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Chi nhánh <span className="text-gray-300 font-normal normal-case">(tùy chọn)</span></label>
+                        <input type="text" placeholder="Ví dụ: Chi nhánh Hải Phòng"
+                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          value={bankConfigs[tab.key].branch}
+                          onChange={e => setBankConfigs(p => ({ ...p, [tab.key]: { ...p[tab.key], branch: e.target.value } }))}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Preview QR */}
+                    {bankConfigs[tab.key].bankId && bankConfigs[tab.key].accountNumber && (
+                      <div className="flex items-center gap-6 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+                        <img
+                          src={`https://img.vietqr.io/image/${bankConfigs[tab.key].bankId}-${bankConfigs[tab.key].accountNumber}-compact.png?amount=100000&addInfo=Preview%20QR&accountName=${encodeURIComponent(bankConfigs[tab.key].accountName)}`}
+                          alt="Preview QR"
+                          className="w-28 h-28 object-contain rounded-xl border border-emerald-200 bg-white"
+                          onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                        />
+                        <div>
+                          <p className="font-black text-emerald-800 text-sm">{bankConfigs[tab.key].accountName || '(Chưa nhập tên)'}</p>
+                          <p className="text-emerald-700 font-mono text-sm mt-0.5">{bankConfigs[tab.key].accountNumber}</p>
+                          <p className="text-emerald-600 text-xs mt-0.5">{bankConfigs[tab.key].bankId}{bankConfigs[tab.key].branch ? ` · ${bankConfigs[tab.key].branch}` : ''}</p>
+                          <p className="text-emerald-500 text-[10px] mt-2 italic">* Đây là QR mẫu với số tiền 100.000đ</p>
+                        </div>
+                      </div>
                     )}
-                  </button>
-                </div>
+
+                    <button
+                      disabled={isSavingBank}
+                      onClick={async () => {
+                        setIsSavingBank(true);
+                        try {
+                          const allSettings = await api.fetchSystemSettings();
+                          const save = async (key: string, value: string) => {
+                            const existing = allSettings.find((s: any) => s.key === key);
+                            if (existing) { await api.updateSystemSetting(existing.documentId || existing.id, { value }); }
+                            else { await api.createSystemSetting({ key, value }); }
+                          };
+                          const cfg = bankConfigs[tab.key];
+                          await save(`bank_id_${tab.key}`, cfg.bankId);
+                          await save(`bank_account_number_${tab.key}`, cfg.accountNumber);
+                          await save(`bank_account_name_${tab.key}`, cfg.accountName);
+                          await save(`bank_branch_${tab.key}`, cfg.branch);
+                          logAction('EDIT', `Cập nhật tài khoản ngân hàng: ${tab.label}`);
+                          alert(`✅ Đã lưu cấu hình ngân hàng cho ${tab.label}!`);
+                        } catch { alert('❌ Lỗi khi lưu. Vui lòng thử lại.'); }
+                        finally { setIsSavingBank(false); }
+                      }}
+                      className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-sm hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isSavingBank ? (
+                        <><svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>Đang lưu...</>
+                      ) : (
+                        <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>Lưu cấu hình — {tab.label}</>
+                      )}
+                    </button>
+                  </div>
+                ))}
               </div>
+
             ) : (
               <>
                 <div className="flex justify-end mb-4"><button onClick={() => { setEditingUniform(null); setIsUniformModalOpen(true); }} className="px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-700/20 hover:bg-slate-800 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức đồng phục</button></div>
