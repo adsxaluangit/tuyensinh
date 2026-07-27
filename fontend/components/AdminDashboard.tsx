@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
@@ -99,7 +99,7 @@ const HorizontalMenuButton: React.FC<{ active: boolean; onClick: () => void; ico
 const SubTabButton: React.FC<{ active: boolean; onClick: () => void; label: string }> = ({ active, onClick, label }) => (
   <button
     onClick={onClick}
-    className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-tight transition-all ${active ? 'bg-blue-900 text-white shadow-md' : 'text-gray-400 hover:text-blue-900 hover:bg-blue-50'
+    className={`px-4 py-2 rounded-xl text-[0.8rem] font-bold uppercase tracking-tight transition-all ${active ? 'bg-blue-900 text-white shadow-md' : 'text-gray-400 hover:text-blue-900 hover:bg-blue-50'
       }`}
   >
     {label}
@@ -117,7 +117,7 @@ const ActionButton: React.FC<{ label: string; color: string; onClick: () => void
   return (
     <button
       onClick={onClick}
-      className={`px-4 py-1.5 rounded-lg border text-[11px] font-black uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap ${colors[color]}`}
+      className={`px-4 py-1.5 rounded-lg border text-[0.8rem] font-bold uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap ${colors[color]}`}
     >
       {label}
     </button>
@@ -126,8 +126,8 @@ const ActionButton: React.FC<{ label: string; color: string; onClick: () => void
 
 const DetailItem = ({ label, value, colSpan = 1, highlight = false }: { label: string, value: string, colSpan?: number, highlight?: boolean }) => (
   <div className={`space-y-1.5 ${colSpan > 1 ? `col-span-${colSpan}` : ''}`}>
-    <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest mb-1">{label}</p>
-    <p className={`font-bold leading-relaxed ${highlight ? 'text-blue-900 text-base font-black' : 'text-gray-800'}`}>{value || '--'}</p>
+    <p className="text-xs text-gray-400 font-bold uppercase tracking-widest mb-1">{label}</p>
+    <p className={`font-bold leading-relaxed ${highlight ? 'text-blue-900 text-base font-bold' : 'text-gray-800'}`}>{value || '--'}</p>
   </div>
 );
 
@@ -137,7 +137,7 @@ const FilePreviewItem = ({ label, src }: { label: string, src: string | null }) 
   return (
     <>
       <div className="flex flex-col items-start gap-4 w-full">
-        <p className="text-[10px] text-gray-400 font-black uppercase tracking-widest">{label}</p>
+        <p className="text-xs text-gray-400 font-bold uppercase tracking-widest">{label}</p>
         <div
           className="w-full aspect-[4/3] bg-gray-50 rounded-[2rem] border-2 border-dashed border-gray-100 overflow-hidden flex items-center justify-center group relative cursor-pointer hover:border-blue-400 hover:shadow-xl transition-all"
           onClick={() => src && setIsOpen(true)}
@@ -146,13 +146,13 @@ const FilePreviewItem = ({ label, src }: { label: string, src: string | null }) 
             <>
               <img src={src} alt={label} className="w-full h-full object-cover transition-transform group-hover:scale-105" />
               <div className="absolute inset-0 bg-blue-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-sm">
-                <span className="text-white text-[10px] font-black uppercase tracking-[0.3em] border-2 border-white/40 px-5 py-2.5 rounded-2xl">Xem ảnh</span>
+                <span className="text-white text-xs font-bold uppercase tracking-[0.3em] border-2 border-white/40 px-5 py-2.5 rounded-2xl">Xem ảnh</span>
               </div>
             </>
           ) : (
             <div className="flex flex-col items-center gap-2">
               <svg className="w-8 h-8 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-              <span className="text-[10px] text-gray-300 font-black uppercase tracking-widest italic">Chưa tải lên</span>
+              <span className="text-xs text-gray-300 font-bold uppercase tracking-widest italic">Chưa tải lên</span>
             </div>
           )}
         </div>
@@ -414,6 +414,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [filterLevel, setFilterLevel] = useState('');
   const [filterMajor, setFilterMajor] = useState('');
   const [selectedSubmission, setSelectedSubmission] = useState<FormData | null>(null);
+  const [isEditingSubmission, setIsEditingSubmission] = useState(false);
+  const [editSubmissionData, setEditSubmissionData] = useState<Record<string, any>>({});
+  const [isSavingSubmission, setIsSavingSubmission] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // Pagination State
@@ -1446,6 +1449,31 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     }
   };
 
+  const handleSaveSubmissionEdit = async () => {
+    if (!selectedSubmission?.docId) return;
+    setIsSavingSubmission(true);
+    try {
+      const allowedFields = ['fullName','gender','dob','pob','ethnicity','issueDate','issuePlace','phone','email','parentName','parentPhone','province','district','addressDetails','gradYear','gradSchool','choice1Major','choice2Major'];
+      const payload: Record<string, any> = {};
+      allowedFields.forEach(f => { if (editSubmissionData[f] !== undefined) payload[f] = editSubmissionData[f] || null; });
+      await api.updateRegistration(selectedSubmission.docId, payload);
+      logAction('EDIT', 'S\u1eeda th\u00f4ng tin h\u1ed3 s\u01a1: ' + (payload.fullName || selectedSubmission.fullName), selectedSubmission.docId);
+      const refreshed = await api.getRegistrationById(selectedSubmission.docId);
+      if (refreshed?.data) {
+        const d = refreshed.data;
+        setSelectedSubmission(prev => ({ ...prev, ...d, id: d.idNumber, docId: d.documentId || d.id, campus: d.campus?.name || d.campus, educationLevel: d.educationLevel?.name || d.educationLevel }));
+      }
+      await fetchData();
+      setIsEditingSubmission(false);
+      alert('Cập nhật hồ sơ thành công!');
+    } catch (err: any) {
+      console.error('Save error:', err);
+      alert('Lỗi khi lưu: ' + (err?.message || 'Vui lòng thử lại.'));
+    } finally {
+      setIsSavingSubmission(false);
+    }
+  };
+
   const updateCurrentSubmissionStatus = async (status: SubmissionStatus) => {
     if (!selectedSubmission?.docId) return;
     try {
@@ -1644,9 +1672,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div class="sig-title">Người nộp tiền</div>
             <div class="sig-name" style="font-weight: normal; font-style: italic; font-size: 10pt">(Ký, ghi rõ họ tên)</div>
           </div>
-          ${(() => { const ck = ((n:string)=>{ const l=(n||'').toLowerCase(); if(l.includes('đinh nhu')) return 'dn'; if(l.includes('nam đồng')) return 'nd'; return 'hp'; })((s as any).campus); const bc = bankConfigs[ck]; return bc.bankId && bc.accountNumber && remaining > 0 ? `
+          ${(() => { const ck = ((n:string)=>{ const l=(n||'').toLowerCase(); if(l.includes('đinh nhu')) return 'dn'; if(l.includes('nam đồng')) return 'nd'; return 'hp'; })((s as any).campus); const bc = bankConfigs[ck]; const paid = s.tuitionPaidAmount || 0; return bc.bankId && bc.accountNumber && paid > 0 ? `
           <div class="qr-box">
-            <img src="https://img.vietqr.io/image/${bc.bankId}-${bc.accountNumber}-compact.png?amount=${remaining}&addInfo=CCCD%20${s.idNumber}&accountName=${encodeURIComponent(bc.accountName)}" alt="QR chuyển khoản" style="width:85px;height:85px;object-fit:contain;" onerror="this.parentElement.style.display='none'" />
+            <img src="https://img.vietqr.io/image/${bc.bankId}-${bc.accountNumber}-compact.png?amount=${paid}&addInfo=CCCD%20${s.idNumber}&accountName=${encodeURIComponent(bc.accountName)}" alt="QR chuyển khoản" style="width:85px;height:85px;object-fit:contain;" onerror="this.parentElement.style.display='none'" />
             <div style="font-size:7.5pt;text-align:center;margin-top:3px;color:#444;font-style:italic;">Quét QR để thanh toán</div>
             <div style="font-size:6pt;text-align:center;margin-top:4px;color:#c00;font-style:italic;line-height:1.4;">⚠ Kiểm tra kỹ thông tin trước khi chuyển.<br/>Nhà trường không chịu trách nhiệm nếu chuyển sai.</div>
           </div>` : ''; })()}
@@ -2480,6 +2508,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       default: return 'bg-gray-50 text-gray-400 border-gray-100';
     }
   };
+  const abbreviateStatus = (status: SubmissionStatus | undefined): string => {
+    switch (status) {
+      case SubmissionStatus.PENDING:   return 'CD';
+      case SubmissionStatus.RECEIVED:  return 'TN';
+      case SubmissionStatus.APPROVED:  return 'TT';
+      case SubmissionStatus.LOCKED:    return 'KH';
+      default: return '?';
+    }
+  };
 
   const isAdmin = user?.role === 'Quản trị viên';
   const isKetoan = user?.role === 'Kế toán';
@@ -2505,14 +2542,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const uniqueFilterMajors = Array.from(new Set(tuitionConfigs.map(c => c.name))).filter(Boolean).sort();
 
   return (
-    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden" style={{ fontFamily: `"Segoe UI", Tahoma, Geneva, Verdana, sans-serif`, fontSize: "16px" }}>
       <header className="bg-blue-900 shadow-2xl z-30 shrink-0">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between px-6 py-3">
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center border border-white/20"><svg className="w-6 h-6 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg></div>
             <div>
-              <h1 className="text-white text-lg font-black tracking-tighter leading-none">ADMIN PORTAL</h1>
-              <p className="text-blue-300/60 text-[9px] font-bold uppercase tracking-widest mt-1">Cao đẳng Hàng hải và Đường thuỷ I</p>
+              <h1 className="text-white text-[1.1rem] font-bold tracking-tighter leading-none">ADMIN PORTAL</h1>
+              <p className="text-blue-300/60 text-xs font-bold uppercase tracking-widest mt-1">Cao đẳng Hàng hải và Đường thuỷ I</p>
             </div>
           </div>
           <nav className="flex items-center gap-2 overflow-x-auto no-scrollbar">
@@ -2546,10 +2583,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-3">
               <div className="text-right hidden sm:block">
-                <p className="text-white font-bold text-sm leading-none">{user?.fullName}</p>
-                <span className="inline-block mt-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 text-[8px] font-black uppercase rounded border border-blue-500/30">{user?.role}</span>
+                <p className="text-white font-bold text-[0.85rem] leading-none">{user?.fullName}</p>
+                <span className="inline-block mt-1 px-2 py-0.5 bg-blue-500/20 text-blue-300 text-xs font-bold uppercase rounded border border-blue-500/30">{user?.role}</span>
               </div>
-              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-blue-300 font-black border border-white/10">{user?.fullName?.charAt(0)}</div>
+              <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-blue-300 font-bold border border-white/10">{user?.fullName?.charAt(0)}</div>
             </div>
             <button onClick={onLogout} className="flex items-center justify-center w-9 h-9 text-blue-300 hover:text-white hover:bg-red-500/20 rounded-xl transition-all" title="Đăng xuất"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg></button>
           </div>
@@ -2573,10 +2610,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             )}
           </div>
           <div className="flex-1">
-            <p className="font-black text-sm">{backupToast.type === 'success' ? '✅ Backup thành công!' : '❌ Backup thất bại'}</p>
+            <p className="font-bold text-[0.85rem]">{backupToast.type === 'success' ? '✅ Backup thành công!' : '❌ Backup thất bại'}</p>
             <p className="text-xs opacity-80 mt-0.5">{backupToast.message}</p>
             {backupToast.file && (
-              <p className="text-[10px] font-mono text-emerald-300 mt-1 opacity-70">{backupToast.file}</p>
+              <p className="text-xs font-mono text-emerald-300 mt-1 opacity-70">{backupToast.file}</p>
             )}
           </div>
           <button onClick={() => setBackupToast(null)} className="shrink-0 text-white/40 hover:text-white transition-colors">
@@ -2590,38 +2627,38 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           <div className="max-w-7xl mx-auto space-y-6">
             <header className="flex justify-between items-center mb-8">
               <div>
-                <h2 className="text-3xl font-black text-blue-950 tracking-tight">Hồ sơ đăng ký</h2>
-                <p className="text-gray-500 text-sm font-medium mt-1">Quản lý và xét tuyển hồ sơ thí sinh trực tuyến</p>
+                <h2 className="text-3xl font-bold text-blue-950 tracking-tight">Hồ sơ đăng ký</h2>
+                <p className="text-gray-500 text-[0.85rem] font-medium mt-1">Quản lý và xét tuyển hồ sơ thí sinh trực tuyến</p>
               </div>
 
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
-              <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 min-w-[120px]"><span className="text-[10px] text-blue-600 font-extrabold uppercase block mb-0.5">Tổng số</span><span className="text-xl font-black text-blue-900">{totalCount}</span></div>
-              <select disabled={!isPowerUser} className={`bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none ${!isPowerUser ? 'opacity-50 cursor-not-allowed' : ''}`} value={filterCampus} onChange={e => { setFilterCampus(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả cơ sở</option>{uniqueFilterCampuses.map(c => <option key={c} value={c}>{c}</option>)}</select>
-              <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none" value={filterLevel} onChange={e => { setFilterLevel(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả hệ đào tạo</option>{uniqueFilterLevels.map(l => <option key={l} value={l}>{l}</option>)}</select>
-              <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-sm font-medium outline-none max-w-[200px]" value={filterMajor} onChange={e => { setFilterMajor(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả nghề đào tạo</option>{uniqueFilterMajors.map((m, idx) => <option key={idx} value={m}>{m}</option>)}</select>
-              <button onClick={handleExportExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
-              <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
+              <div className="bg-blue-50 px-4 py-2 rounded-xl border border-blue-100 min-w-[120px]"><span className="text-xs text-blue-600 font-extrabold uppercase block mb-0.5">Tổng số</span><span className="text-xl font-bold text-blue-900">{totalCount}</span></div>
+              <select disabled={!isPowerUser} className={`bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-[0.85rem] font-medium outline-none ${!isPowerUser ? 'opacity-50 cursor-not-allowed' : ''}`} value={filterCampus} onChange={e => { setFilterCampus(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả cơ sở</option>{uniqueFilterCampuses.map(c => <option key={c} value={c}>{c}</option>)}</select>
+              <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-[0.85rem] font-medium outline-none" value={filterLevel} onChange={e => { setFilterLevel(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả hệ đào tạo</option>{uniqueFilterLevels.map(l => <option key={l} value={l}>{l}</option>)}</select>
+              <select className="bg-gray-50 border border-gray-200 px-3 py-2 rounded-xl text-[0.85rem] font-medium outline-none max-w-[200px]" value={filterMajor} onChange={e => { setFilterMajor(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }}><option value="">Tất cả nghề đào tạo</option>{uniqueFilterMajors.map((m, idx) => <option key={idx} value={m}>{m}</option>)}</select>
+              <button onClick={handleExportExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-[0.85rem] font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
+              <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-[0.85rem] outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
             </div>
-            {!isKetoan && <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto items-center"><span className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3">Thao tác nhanh:</span><ActionButton label="Tiếp nhận" color="blue" onClick={() => updateStatusForSelected(SubmissionStatus.RECEIVED)} />{user?.role !== 'Cán bộ tiếp nhận' && (<><ActionButton label="Duyệt trúng tuyển" color="green" onClick={() => updateStatusForSelected(SubmissionStatus.APPROVED)} /><ActionButton label="Khóa hồ sơ" color="slate" onClick={() => updateStatusForSelected(SubmissionStatus.LOCKED)} /><ActionButton label="Hủy trạng thái" color="orange" onClick={() => updateStatusForSelected(SubmissionStatus.PENDING)} /></>)}{isAdmin && <ActionButton label="Xóa hồ sơ" color="red" onClick={handleDeleteSelected} />}{isAdmin && (<><div className="w-px h-5 bg-gray-200 mx-1 shrink-0" /><button onClick={handleDownloadRegistrationTemplate} title="Tải file Excel mẫu để nhập hồ sơ" className="px-4 py-1.5 rounded-lg border text-[11px] font-black uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button><button onClick={() => importFileRef.current?.click()} disabled={isLoading} title="Import danh sách hồ sơ từ file Excel" className="px-4 py-1.5 rounded-lg border text-[11px] font-black uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100 disabled:opacity-50 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4 4l-4-4m0 0l4-4m-4 4V4" /></svg>{isLoading ? 'Đang import...' : 'Import Excel'}</button><input ref={importFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} /></>)}</div>}
+            {!isKetoan && <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto items-center"><span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-3">Thao tác nhanh:</span><ActionButton label="Tiếp nhận" color="blue" onClick={() => updateStatusForSelected(SubmissionStatus.RECEIVED)} />{user?.role !== 'Cán bộ tiếp nhận' && (<><ActionButton label="Duyệt trúng tuyển" color="green" onClick={() => updateStatusForSelected(SubmissionStatus.APPROVED)} /><ActionButton label="Khóa hồ sơ" color="slate" onClick={() => updateStatusForSelected(SubmissionStatus.LOCKED)} /><ActionButton label="Hủy trạng thái" color="orange" onClick={() => updateStatusForSelected(SubmissionStatus.PENDING)} /></>)}{isAdmin && <ActionButton label="Xóa hồ sơ" color="red" onClick={handleDeleteSelected} />}{isAdmin && (<><div className="w-px h-5 bg-gray-200 mx-1 shrink-0" /><button onClick={handleDownloadRegistrationTemplate} title="Tải file Excel mẫu để nhập hồ sơ" className="px-4 py-1.5 rounded-lg border text-[0.8rem] font-bold uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button><button onClick={() => importFileRef.current?.click()} disabled={isLoading} title="Import danh sách hồ sơ từ file Excel" className="px-4 py-1.5 rounded-lg border text-[0.8rem] font-bold uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100 disabled:opacity-50 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4 4l-4-4m0 0l4-4m-4 4V4" /></svg>{isLoading ? 'Đang import...' : 'Import Excel'}</button><input ref={importFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} /></>)}</div>}
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
-                    <tr><th className="px-6 py-4 w-10"><input type="checkbox" className="w-4 h-4 rounded text-blue-600 cursor-pointer" checked={selectedIds.size === filteredSubmissions.length && filteredSubmissions.length > 0} onChange={toggleSelectAll} /></th><th className="px-4 py-4">Mã hồ sơ (CCCD)</th><th className="px-4 py-4">Họ và tên</th><th className="px-4 py-4">Số điện thoại</th><th className="px-4 py-4">Cơ sở</th><th className="px-4 py-4">Hệ đào tạo</th><th className="px-4 py-4">Nghề đào tạo</th><th className="px-4 py-4 text-center">Trạng thái</th><th className="px-4 py-4 text-center">Thao tác</th></tr>
+                  <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
+                    <tr><th className="px-4 py-4 w-10"><input type="checkbox" className="w-4 h-4 rounded text-blue-600 cursor-pointer" checked={selectedIds.size === filteredSubmissions.length && filteredSubmissions.length > 0} onChange={toggleSelectAll} /></th><th className="px-3 py-4">Mã hồ sơ (CCCD)</th><th className="px-3 py-4">Họ và tên</th><th className="px-3 py-4">Số điện thoại</th><th className="px-3 py-4">Cơ sở</th><th className="px-3 py-4">Hệ đào tạo</th><th className="px-3 py-4">Nghề đào tạo</th><th className="px-3 py-4 text-center">Trạng thái</th><th className="px-2 py-4 text-center">Thao tác</th></tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm">
+                  <tbody className="divide-y divide-gray-100 text-[0.85rem]">
                     {filteredSubmissions.map(s => (
                       <tr key={s.id} className={`hover:bg-blue-50/30 transition-colors ${selectedIds.has(s.id) ? 'bg-blue-50/50' : ''}`}>
                         <td className="px-6 py-4"><input type="checkbox" className="w-4 h-4 rounded text-blue-600 cursor-pointer" checked={selectedIds.has(s.id)} onChange={() => toggleSelect(s.id)} /></td>
-                        <td className="px-4 py-4 font-mono text-gray-400 text-xs">{s.idNumber}</td>
-                        <td className="px-4 py-4 font-bold text-blue-900">{s.fullName}</td>
-                        <td className="px-4 py-4 text-gray-600">{s.phone}</td>
-                        <td className="px-4 py-4"><span className="bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-blue-100 uppercase whitespace-nowrap tracking-wider">{s.campus}</span></td>
-                        <td className="px-4 py-4"><span className="bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg text-[10px] font-black border border-purple-100 uppercase whitespace-nowrap tracking-wider">{s.educationLevel}</span></td>
-                        <td className="px-4 py-4"><div className="flex flex-col"><span className="text-gray-950 font-black text-[11px] leading-tight block max-w-[180px] uppercase">{s.choice1Major}</span><span className="text-gray-400 text-[9px] font-bold uppercase mt-0.5">Mã nghề: {s.choice1Specialty}</span></div></td>
-                        <td className="px-4 py-4 text-center"><span className={`inline-block px-3 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-widest whitespace-nowrap ${getStatusStyle(s.status)}`}>{s.status}</span></td>
-                        <td className="px-4 py-4 text-center"><div className="flex justify-center gap-1.5"><button onClick={() => handleViewDetail(s)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button>{!isKetoan && <button onClick={() => handleViewDetail(s)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-xl transition-all" title="Sửa hồ sơ"><EditIcon /></button>}{isAdmin && <button onClick={() => handleDeleteSingle(s.docId)} className="p-2 text-red-500 hover:bg-red-100 rounded-xl transition-all" title="Xóa hồ sơ"><DeleteIcon /></button>}</div></td>
+                        <td className="px-3 py-4 font-mono text-gray-400 text-xs">{s.idNumber}</td>
+                        <td className="px-3 py-4 font-bold text-blue-900">{s.fullName}</td>
+                        <td className="px-3 py-4 text-gray-600">{s.phone}</td>
+                        <td className="px-3 py-4"><span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-lg text-xs font-bold border border-blue-100 uppercase tracking-wider leading-snug inline-block max-w-[130px]">{s.campus}</span></td>
+                        <td className="px-3 py-4"><span className="bg-purple-50 text-purple-600 px-2 py-1 rounded-lg text-xs font-bold border border-purple-100 uppercase tracking-wider leading-snug inline-block max-w-[80px]">{s.educationLevel}</span></td>
+                        <td className="px-3 py-4"><div className="flex flex-col"><span className="text-gray-950 font-bold text-[0.8rem] leading-tight block max-w-[140px] uppercase">{s.choice1Major}</span><span className="text-gray-400 text-xs font-bold uppercase mt-0.5">Mã nghề: {s.choice1Specialty}</span></div></td>
+                        <td className="px-2 py-4 text-center"><span className={`inline-block px-2 py-1 rounded text-xs font-bold border uppercase tracking-wider ${getStatusStyle(s.status)}`} title={s.status}>{abbreviateStatus(s.status)}</span></td>
+                        <td className="px-2 py-4 text-center"><div className="flex justify-center gap-1"><button onClick={() => handleViewDetail(s)} className="p-1.5 text-blue-600 hover:bg-blue-100 rounded-lg transition-all" title="Xem chi tiết"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg></button>{!isKetoan && <button onClick={() => handleViewDetail(s)} className="p-1.5 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all" title="Sửa hồ sơ"><EditIcon /></button>}{isAdmin && <button onClick={() => handleDeleteSingle(s.docId)} className="p-1.5 text-red-500 hover:bg-red-100 rounded-lg transition-all" title="Xóa hồ sơ"><DeleteIcon /></button>}</div></td>
                       </tr>
                     ))}
                   </tbody>
@@ -2641,7 +2678,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                   </button>
-                  <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-blue-900 text-xs font-black">
+                  <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-blue-900 text-xs font-bold">
                     Trang {pagination.page} / {Math.ceil(totalCount / pagination.pageSize) || 1}
                   </div>
                   <button
@@ -2659,15 +2696,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           <div className="max-w-7xl mx-auto space-y-6">
             <header className="flex justify-between items-center mb-8">
               <div>
-                <h2 className="text-3xl font-black text-blue-950 tracking-tight">Quản lý học phí</h2>
-                <p className="text-gray-500 text-sm font-medium mt-1">Theo dõi tình trạng nộp học phí của các thí sinh trúng tuyển</p>
+                <h2 className="text-3xl font-bold text-blue-950 tracking-tight">Quản lý học phí</h2>
+                <p className="text-gray-500 text-[0.85rem] font-medium mt-1">Theo dõi tình trạng nộp học phí của các thí sinh trúng tuyển</p>
               </div>
             </header>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 flex flex-wrap gap-4 items-center">
-              <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[120px]"><span className="text-[10px] text-emerald-600 font-extrabold uppercase block mb-0.5">Trúng tuyển</span><span className="text-xl font-black text-emerald-900">{tuitionTotalCount}</span></div>
+              <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-100 min-w-[120px]"><span className="text-xs text-emerald-600 font-extrabold uppercase block mb-0.5">Trúng tuyển</span><span className="text-xl font-bold text-emerald-900">{tuitionTotalCount}</span></div>
               <button
                 onClick={handleSyncTuitionFromConfig}
-                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="px-5 py-2 bg-blue-600 text-white rounded-xl text-[0.85rem] font-bold flex items-center gap-2 hover:bg-blue-700 transition-colors disabled:opacity-50"
                 disabled={isLoading}
               >
                 <svg className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -2675,15 +2712,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                 </svg>
                 {isLoading ? 'Đang đồng bộ...' : 'Đồng bộ từ cấu hình'}
               </button>
-              <button onClick={handleExportTuitionExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
-              <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setTuitionPagination(prev => ({ ...prev, page: 1 })); }} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
+              <button onClick={handleExportTuitionExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-[0.85rem] font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
+              <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-[0.85rem] outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setTuitionPagination(prev => ({ ...prev, page: 1 })); }} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
             </div>
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
               <table className="w-full text-left">
-                <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                   <tr><th className="px-2 py-4 w-[110px]">Mã số (CCCD)</th><th className="px-4 py-4">Họ và tên</th><th className="px-4 py-4">SĐT</th><th className="px-4 py-4 min-w-[140px]">Nghề đào tạo</th><th className="px-4 py-4 text-center">Học phí</th><th className="px-4 py-4 text-center">BH Y Tế</th><th className="px-4 py-4 text-center">BH Toàn Diện</th><th className="px-4 py-4 text-center">Đồng Phục</th><th className="px-2 py-4 text-center w-[110px]">Đã nộp</th><th className="px-4 py-4 text-center">Còn lại</th><th className="px-4 py-4 text-center">In Hóa đơn</th><th className="px-4 py-4 text-center">Ghi chú</th></tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100 text-sm">
+                <tbody className="divide-y divide-gray-100 text-[0.85rem]">
                   {isTuitionLoading ? (
                     <tr><td colSpan={12} className="px-6 py-10 text-center text-blue-600 font-bold italic animate-pulse">Đang nạp toàn bộ danh sách trúng tuyển...</td></tr>
                   ) : tuitionTotalCount === 0 ? (
@@ -2713,7 +2750,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                           <td className="px-2 py-4 text-xs font-mono text-gray-400 break-all w-[110px] whitespace-nowrap">{s.idNumber}</td>
                           <td className="px-4 py-4 font-bold text-blue-900">{s.fullName}</td>
                           <td className="px-4 py-4 text-gray-600">{s.phone}</td>
-                          <td className="px-4 py-4 font-medium text-gray-700 uppercase text-[11px] min-w-[140px]">{s.choice1Major}</td>
+                          <td className="px-4 py-4 font-medium text-gray-700 uppercase text-[0.8rem] min-w-[140px]">{s.choice1Major}</td>
                           <td className="px-4 py-4 text-center font-bold text-gray-900">{(s.tuitionAmount || 0).toLocaleString('vi-VN')}</td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-blue-600 cursor-pointer" checked={s.isHealthSelected} onChange={(e) => handleFeeSelect('isHealthSelected', e.target.checked)} /><span className={`font-bold text-blue-600 ${!s.isHealthSelected && 'opacity-30'}`}>{(s.healthAmount || 0).toLocaleString('vi-VN')}</span></div></td>
                           <td className="px-4 py-4 text-center"><div className="flex flex-col items-center gap-1"><input type="checkbox" className="w-4 h-4 rounded text-orange-600 cursor-pointer" checked={s.isComprehensiveSelected} onChange={(e) => handleFeeSelect('isComprehensiveSelected', e.target.checked)} /><span className={`font-bold text-orange-600 ${!s.isComprehensiveSelected && 'opacity-30'}`}>{(s.comprehensiveAmount || 0).toLocaleString('vi-VN')}</span></div></td>
@@ -2776,7 +2813,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" /></svg>
                   </button>
-                  <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-emerald-900 text-xs font-black">
+                  <div className="px-4 py-2 rounded-lg bg-white border border-blue-100 text-emerald-900 text-xs font-bold">
                     Trang {tuitionPagination.page} / {Math.ceil(tuitionTotalCount / tuitionPagination.pageSize) || 1}
                   </div>
                   <button
@@ -2795,8 +2832,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           <div className="max-w-7xl mx-auto space-y-6">
             <header className="flex justify-between items-center mb-4">
               <div>
-                <h2 className="text-3xl font-black text-blue-950 tracking-tight">Biên tập mẫu văn bản</h2>
-                <p className="text-gray-500 text-sm font-medium mt-1">Biên tập nội dung Giấy triệu tập hoặc Biên lai học phí</p>
+                <h2 className="text-3xl font-bold text-blue-950 tracking-tight">Biên tập mẫu văn bản</h2>
+                <p className="text-gray-500 text-[0.85rem] font-medium mt-1">Biên tập nội dung Giấy triệu tập hoặc Biên lai học phí</p>
               </div>
             </header>
             <div className="flex items-center gap-1 bg-white p-1 rounded-2xl shadow-sm border border-gray-200 w-fit mb-6">
@@ -2805,39 +2842,39 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 p-8">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
                 <div className="space-y-6">
-                  <h4 className="text-blue-900 font-black uppercase text-xs tracking-widest border-b pb-2">Thông tin hiển thị trên văn bản</h4>
+                  <h4 className="text-blue-900 font-bold uppercase text-xs tracking-widest border-b pb-2">Thông tin hiển thị trên văn bản</h4>
                   <div className="space-y-4">
-                    <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-1">Tiêu đề văn bản</label><input className="w-full bg-gray-50 border rounded-xl px-4 py-3 font-bold text-blue-900 focus:ring-2 focus:ring-blue-500/20 outline-none" value={admissionTemplates[admissionSubTab].title} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].title = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div>
-                    <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-1">{admissionSubTab === 'Thu học phí' ? 'Số tiền bằng chữ (Mặc định)' : 'Ghi chú / Căn cứ'}</label><textarea rows={3} className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none resize-none" value={admissionTemplates[admissionSubTab].basis} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].basis = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div>
-                    <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-1">Tên đơn vị ban hành</label><input className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-sm font-bold focus:ring-2 focus:ring-blue-500/20 outline-none" value={admissionTemplates[admissionSubTab].announcer} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].announcer = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div>
+                    <div><label className="text-xs font-bold text-gray-400 uppercase block mb-1">Tiêu đề văn bản</label><input className="w-full bg-gray-50 border rounded-xl px-4 py-3 font-bold text-blue-900 focus:ring-2 focus:ring-blue-500/20 outline-none" value={admissionTemplates[admissionSubTab].title} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].title = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div>
+                    <div><label className="text-xs font-bold text-gray-400 uppercase block mb-1">{admissionSubTab === 'Thu học phí' ? 'Số tiền bằng chữ (Mặc định)' : 'Ghi chú / Căn cứ'}</label><textarea rows={3} className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-[0.85rem] focus:ring-2 focus:ring-blue-500/20 outline-none resize-none" value={admissionTemplates[admissionSubTab].basis} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].basis = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div>
+                    <div><label className="text-xs font-bold text-gray-400 uppercase block mb-1">Tên đơn vị ban hành</label><input className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-[0.85rem] font-bold focus:ring-2 focus:ring-blue-500/20 outline-none" value={admissionTemplates[admissionSubTab].announcer} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].announcer = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div>
                     {admissionSubTab !== 'Thu học phí' && (
-                      <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-1">Thời gian nhập học (Dành cho Giấy báo)</label><div className="grid grid-cols-4 gap-2"><div className="space-y-1"><input className="w-full bg-gray-50 border rounded-xl px-2 py-2 text-xs font-bold" placeholder="Giờ" value={admissionTemplates[admissionSubTab].admissionHour} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].admissionHour = e.target.value; saveTemplatesToStorage(newTemplates); }} /><p className="text-[8px] text-center text-gray-400 uppercase font-black">Giờ</p></div><div className="space-y-1"><input className="w-full bg-gray-50 border rounded-xl px-2 py-2 text-xs font-bold" placeholder="Ngày" value={admissionTemplates[admissionSubTab].admissionDay} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].admissionDay = e.target.value; saveTemplatesToStorage(newTemplates); }} /><p className="text-[8px] text-center text-gray-400 uppercase font-black">Ngày</p></div><div className="space-y-1"><input className="w-full bg-gray-50 border rounded-xl px-2 py-2 text-xs font-bold" placeholder="Tháng" value={admissionTemplates[admissionSubTab].admissionMonth} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].admissionMonth = e.target.value; saveTemplatesToStorage(newTemplates); }} /><p className="text-[8px] text-center text-gray-400 uppercase font-black">Tháng</p></div><div className="space-y-1"><input className="w-full bg-gray-50 border rounded-xl px-2 py-2 text-xs font-bold" placeholder="Năm" value={admissionTemplates[admissionSubTab].admissionYear} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].admissionYear = e.target.value; saveTemplatesToStorage(newTemplates); }} /><p className="text-[8px] text-center text-gray-400 uppercase font-black">Năm</p></div></div></div>
+                      <div><label className="text-xs font-bold text-gray-400 uppercase block mb-1">Thời gian nhập học (Dành cho Giấy báo)</label><div className="grid grid-cols-4 gap-2"><div className="space-y-1"><input className="w-full bg-gray-50 border rounded-xl px-2 py-2 text-xs font-bold" placeholder="Giờ" value={admissionTemplates[admissionSubTab].admissionHour} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].admissionHour = e.target.value; saveTemplatesToStorage(newTemplates); }} /><p className="text-xs text-center text-gray-400 uppercase font-bold">Giờ</p></div><div className="space-y-1"><input className="w-full bg-gray-50 border rounded-xl px-2 py-2 text-xs font-bold" placeholder="Ngày" value={admissionTemplates[admissionSubTab].admissionDay} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].admissionDay = e.target.value; saveTemplatesToStorage(newTemplates); }} /><p className="text-xs text-center text-gray-400 uppercase font-bold">Ngày</p></div><div className="space-y-1"><input className="w-full bg-gray-50 border rounded-xl px-2 py-2 text-xs font-bold" placeholder="Tháng" value={admissionTemplates[admissionSubTab].admissionMonth} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].admissionMonth = e.target.value; saveTemplatesToStorage(newTemplates); }} /><p className="text-xs text-center text-gray-400 uppercase font-bold">Tháng</p></div><div className="space-y-1"><input className="w-full bg-gray-50 border rounded-xl px-2 py-2 text-xs font-bold" placeholder="Năm" value={admissionTemplates[admissionSubTab].admissionYear} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].admissionYear = e.target.value; saveTemplatesToStorage(newTemplates); }} /><p className="text-xs text-center text-gray-400 uppercase font-bold">Năm</p></div></div></div>
                     )}
-                    <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-1">Địa chỉ liên hệ / Thu phí</label><textarea rows={2} className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/20 outline-none resize-none" value={admissionTemplates[admissionSubTab].location} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].location = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div>
-                    <div><label className="text-[10px] font-black text-gray-400 uppercase block mb-1">Hotline & Website</label><div className="flex gap-4"><input className="flex-1 bg-gray-50 border rounded-xl px-4 py-2 text-xs" placeholder="Hotline" value={admissionTemplates[admissionSubTab].hotline} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].hotline = e.target.value; saveTemplatesToStorage(newTemplates); }} /><input className="flex-1 bg-gray-50 border rounded-xl px-4 py-2 text-xs" placeholder="Website" value={admissionTemplates[admissionSubTab].website} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].website = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div></div>
-                    <div className="flex gap-4"><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase block mb-1">Chức danh người ký</label><textarea rows={2} className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none resize-none" value={admissionTemplates[admissionSubTab].footerTitle} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].footerTitle = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div><div className="flex-1"><label className="text-[10px] font-black text-gray-400 uppercase block mb-1">Họ tên người ký</label><input className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-xs font-bold" value={admissionTemplates[admissionSubTab].footerName} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].footerName = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div></div>
+                    <div><label className="text-xs font-bold text-gray-400 uppercase block mb-1">Địa chỉ liên hệ / Thu phí</label><textarea rows={2} className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-[0.85rem] focus:ring-2 focus:ring-blue-500/20 outline-none resize-none" value={admissionTemplates[admissionSubTab].location} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].location = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div>
+                    <div><label className="text-xs font-bold text-gray-400 uppercase block mb-1">Hotline & Website</label><div className="flex gap-4"><input className="flex-1 bg-gray-50 border rounded-xl px-4 py-2 text-xs" placeholder="Hotline" value={admissionTemplates[admissionSubTab].hotline} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].hotline = e.target.value; saveTemplatesToStorage(newTemplates); }} /><input className="flex-1 bg-gray-50 border rounded-xl px-4 py-2 text-xs" placeholder="Website" value={admissionTemplates[admissionSubTab].website} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].website = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div></div>
+                    <div className="flex gap-4"><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase block mb-1">Chức danh người ký</label><textarea rows={2} className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-blue-500/20 outline-none resize-none" value={admissionTemplates[admissionSubTab].footerTitle} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].footerTitle = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div><div className="flex-1"><label className="text-xs font-bold text-gray-400 uppercase block mb-1">Họ tên người ký</label><input className="w-full bg-gray-50 border rounded-xl px-4 py-3 text-xs font-bold" value={admissionTemplates[admissionSubTab].footerName} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].footerName = e.target.value; saveTemplatesToStorage(newTemplates); }} /></div></div>
                   </div>
                 </div>
                 <div className="space-y-6">
-                  <h4 className="text-blue-900 font-black uppercase text-xs tracking-widest border-b pb-2">Hình ảnh & Tùy chọn</h4>
+                  <h4 className="text-blue-900 font-bold uppercase text-xs tracking-widest border-b pb-2">Hình ảnh & Tùy chọn</h4>
                   <div className="space-y-4">
                     <div className="bg-gray-50 p-4 rounded-xl border border-dashed border-gray-300">
-                      <label className="text-[10px] font-black text-gray-400 uppercase block mb-2">Ảnh Mã QR / Dấu đỏ scan</label>
+                      <label className="text-xs font-bold text-gray-400 uppercase block mb-2">Ảnh Mã QR / Dấu đỏ scan</label>
                       <div className="flex items-center gap-4">
-                        <div className="w-24 h-24 bg-white border rounded-lg flex items-center justify-center overflow-hidden shrink-0">{admissionTemplates[admissionSubTab].qrCodeImage ? (<img src={admissionTemplates[admissionSubTab].qrCodeImage!} className="w-full h-full object-contain" alt="QR Preview" />) : (<span className="text-[8px] text-gray-400 font-bold uppercase text-center px-1">Không ảnh</span>)}</div>
-                        <div className="flex flex-col gap-2 flex-1"><label className="cursor-pointer bg-blue-900 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest text-center hover:bg-blue-800 transition-all">Tải lên ảnh mới<input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} /></label>{admissionTemplates[admissionSubTab].qrCodeImage && (<button onClick={() => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].qrCodeImage = null; saveTemplatesToStorage(newTemplates); }} className="text-[10px] text-red-500 font-black uppercase tracking-widest hover:underline">Xóa ảnh</button>)}</div>
+                        <div className="w-24 h-24 bg-white border rounded-lg flex items-center justify-center overflow-hidden shrink-0">{admissionTemplates[admissionSubTab].qrCodeImage ? (<img src={admissionTemplates[admissionSubTab].qrCodeImage!} className="w-full h-full object-contain" alt="QR Preview" />) : (<span className="text-xs text-gray-400 font-bold uppercase text-center px-1">Không ảnh</span>)}</div>
+                        <div className="flex flex-col gap-2 flex-1"><label className="cursor-pointer bg-blue-900 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-center hover:bg-blue-800 transition-all">Tải lên ảnh mới<input type="file" accept="image/*" className="hidden" onChange={handleQrUpload} /></label>{admissionTemplates[admissionSubTab].qrCodeImage && (<button onClick={() => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].qrCodeImage = null; saveTemplatesToStorage(newTemplates); }} className="text-xs text-red-500 font-bold uppercase tracking-widest hover:underline">Xóa ảnh</button>)}</div>
                       </div>
                     </div>
                     {admissionSubTab !== 'Thu học phí' && (
                       <div className="space-y-3">
-                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Danh sách hồ sơ cần mang theo:</p>
-                        {admissionTemplates[admissionSubTab].requirements.map((req, idx) => (<div key={idx} className="flex gap-2"><input className="flex-1 bg-gray-50 border rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-blue-500/10 outline-none" value={req} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].requirements[idx] = e.target.value; saveTemplatesToStorage(newTemplates); }} /><button onClick={() => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].requirements.splice(idx, 1); saveTemplatesToStorage(newTemplates); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg></button></div>))}
+                        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Danh sách hồ sơ cần mang theo:</p>
+                        {admissionTemplates[admissionSubTab].requirements.map((req, idx) => (<div key={idx} className="flex gap-2"><input className="flex-1 bg-gray-50 border rounded-xl px-4 py-3 text-[0.85rem] focus:ring-2 focus:ring-blue-500/10 outline-none" value={req} onChange={(e) => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].requirements[idx] = e.target.value; saveTemplatesToStorage(newTemplates); }} /><button onClick={() => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].requirements.splice(idx, 1); saveTemplatesToStorage(newTemplates); }} className="p-2 text-red-500 hover:bg-red-50 rounded-lg"><svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" /></svg></button></div>))}
                         <button onClick={() => { const newTemplates = { ...admissionTemplates }; newTemplates[admissionSubTab].requirements.push("Hồ sơ bổ sung..."); saveTemplatesToStorage(newTemplates); }} className="w-full py-2 border-2 border-dashed rounded-xl text-xs font-bold text-blue-600 hover:bg-blue-50 transition-all">+ Thêm dòng hồ sơ</button>
                       </div>
                     )}
                   </div>
                   <div className="pt-6 border-t border-gray-100 flex flex-col gap-4">
-                    <div className="flex items-center justify-between"><p className="text-[10px] text-gray-400 font-bold uppercase italic">* Dữ liệu được lưu trữ tập trung trên hệ thống Strapi.</p><div className="flex gap-3"><button onClick={handlePrintBlankTemplate} className="px-6 py-3 border-2 border-blue-900 text-blue-900 rounded-2xl font-black uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-95 text-xs">In mẫu thử</button><button onClick={handleSaveAdmissionTemplate} className="px-8 py-3 bg-blue-900 text-white rounded-2xl font-black uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all active:scale-95 text-xs">Xác nhận lưu</button></div></div>
+                    <div className="flex items-center justify-between"><p className="text-xs text-gray-400 font-bold uppercase italic">* Dữ liệu được lưu trữ tập trung trên hệ thống Strapi.</p><div className="flex gap-3"><button onClick={handlePrintBlankTemplate} className="px-6 py-3 border-2 border-blue-900 text-blue-900 rounded-2xl font-bold uppercase tracking-widest hover:bg-blue-50 transition-all active:scale-95 text-xs">In mẫu thử</button><button onClick={handleSaveAdmissionTemplate} className="px-8 py-3 bg-blue-900 text-white rounded-2xl font-bold uppercase tracking-widest shadow-xl shadow-blue-900/20 hover:bg-blue-800 transition-all active:scale-95 text-xs">Xác nhận lưu</button></div></div>
                   </div>
                 </div>
               </div>
@@ -2847,8 +2884,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           <div className="max-w-7xl mx-auto space-y-6">
             <header className="flex justify-between items-center mb-4">
               <div>
-                <h2 className="text-3xl font-black text-blue-950 tracking-tight">Cấu hình hệ thống</h2>
-                <p className="text-gray-500 text-sm font-medium mt-1">Quản lý cơ sở, hệ đào tạo, định mức học phí, bảo hiểm và đồng phục</p>
+                <h2 className="text-3xl font-bold text-blue-950 tracking-tight">Cấu hình hệ thống</h2>
+                <p className="text-gray-500 text-[0.85rem] font-medium mt-1">Quản lý cơ sở, hệ đào tạo, định mức học phí, bảo hiểm và đồng phục</p>
               </div>
             </header>
             <div className="flex items-center gap-1 bg-white p-1 rounded-2xl shadow-sm border border-gray-200 w-fit mb-6">
@@ -2856,13 +2893,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             </div>
             {tuitionSubTab === 'campuses' ? (
               <>
-                <div className="flex justify-end mb-4"><button onClick={() => { setEditingCampus(null); setIsCampusModalOpen(true); }} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm cơ sở mới</button></div>
+                <div className="flex justify-end mb-4"><button onClick={() => { setEditingCampus(null); setIsCampusModalOpen(true); }} className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm cơ sở mới</button></div>
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                    <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                       <tr><th className="px-8 py-4">Mã cơ sở</th><th className="px-8 py-4">Tên cơ sở</th><th className="px-8 py-4">Địa chỉ liên hệ</th><th className="px-8 py-4 text-center">Thao tác</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 text-sm">
+                    <tbody className="divide-y divide-gray-100 text-[0.85rem]">
                       {campusConfigs.length === 0 ? (<tr><td colSpan={4} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình cơ sở nào</td></tr>) : (
                         campusConfigs.map(config => (
                           <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
@@ -2879,13 +2916,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </>
             ) : tuitionSubTab === 'education-levels' ? (
               <>
-                <div className="flex justify-end mb-4"><button onClick={() => { setEditingEducationLevel(null); setIsEducationLevelModalOpen(true); }} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm hệ đào tạo</button></div>
+                <div className="flex justify-end mb-4"><button onClick={() => { setEditingEducationLevel(null); setIsEducationLevelModalOpen(true); }} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm hệ đào tạo</button></div>
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                    <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                       <tr><th className="px-8 py-4">Mã hệ</th><th className="px-8 py-4">Tên hệ đào tạo</th><th className="px-8 py-4">Mô tả chi tiết</th><th className="px-8 py-4 text-center">Thao tác</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 text-sm">
+                    <tbody className="divide-y divide-gray-100 text-[0.85rem]">
                       {educationLevelConfigs.length === 0 ? (<tr><td colSpan={4} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình hệ đào tạo nào</td></tr>) : (
                         educationLevelConfigs.map(config => (
                           <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
@@ -2907,7 +2944,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                     <input
                       type="text"
                       placeholder="Tìm mã nghề, tên nghề, cơ sở..."
-                      className="w-full bg-white border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm"
+                      className="w-full bg-white border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-[0.85rem] outline-none focus:ring-2 focus:ring-blue-500/20 shadow-sm"
                       value={configSearchTerm}
                       onChange={e => { setConfigSearchTerm(e.target.value); setMajorPage(1); }}
                     />
@@ -2917,15 +2954,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                   </div>
                   <div className="flex gap-2">
                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx, .xls" className="hidden" />
-                    <button onClick={handleDownloadTemplate} className="px-6 py-2.5 bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button>
-                    <button onClick={handleExcelImport} className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>Nhập từ Excel</button>
-                    <button onClick={handleClearAllOccupations} className="px-6 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all flex items-center gap-2" title="Xóa toàn bộ danh mục để nhập mới"><DeleteIcon /> Xóa sạch danh mục</button>
-                    <button onClick={() => { setEditingTuition(null); setIsTuitionModalOpen(true); }} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức học phí</button>
+                    <button onClick={handleDownloadTemplate} className="px-6 py-2.5 bg-blue-500 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-blue-500/20 hover:bg-blue-600 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button>
+                    <button onClick={handleExcelImport} className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-green-600/20 hover:bg-green-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>Nhập từ Excel</button>
+                    <button onClick={handleClearAllOccupations} className="px-6 py-2.5 bg-red-600 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-red-600/20 hover:bg-red-700 transition-all flex items-center gap-2" title="Xóa toàn bộ danh mục để nhập mới"><DeleteIcon /> Xóa sạch danh mục</button>
+                    <button onClick={() => { setEditingTuition(null); setIsTuitionModalOpen(true); }} className="px-6 py-2.5 bg-emerald-600 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-emerald-600/20 hover:bg-emerald-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức học phí</button>
                   </div>
                 </div>
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                    <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                       <tr><th className="px-6 py-4">Mã nghề</th><th className="px-6 py-4">Tên nghề đào tạo</th><th className="px-6 py-4">Cơ sở</th><th className="px-6 py-4">Hệ</th><th className="px-6 py-4 text-center">Học phí</th><th className="px-6 py-4 text-center">Thao tác</th></tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
@@ -2946,10 +2983,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                         return paginated.map(config => (
                           <tr key={config.id} className="hover:bg-gray-50/50 transition-colors">
                             <td className="px-6 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td>
-                            <td className="px-6 py-5 text-gray-900 font-bold text-sm uppercase">{config.name}</td>
-                            <td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-indigo-100">{config.campus}</span></td>
-                            <td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-[10px] font-black uppercase border border-blue-100">{config.educationLevel}</span></td>
-                            <td className="px-6 py-5 text-center"><span className="text-emerald-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td>
+                            <td className="px-6 py-5 text-gray-900 font-bold text-[0.85rem] uppercase">{config.name}</td>
+                            <td className="px-6 py-5"><span className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded text-xs font-bold uppercase border border-indigo-100">{config.campus}</span></td>
+                            <td className="px-6 py-5"><span className="bg-blue-50 text-blue-700 px-2 py-1 rounded text-xs font-bold uppercase border border-blue-100">{config.educationLevel}</span></td>
+                            <td className="px-6 py-5 text-center"><span className="text-emerald-600 font-bold text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-xs text-gray-400 font-bold ml-1">đ</span></td>
                             <td className="px-6 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingTuition(config); setIsTuitionModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteTuition(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td>
                           </tr>
                         ));
@@ -2986,7 +3023,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                             <button
                               key={p}
                               onClick={() => setMajorPage(p)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-black border transition-all ${p === safePage ? 'bg-blue-900 text-white border-blue-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:border-blue-200'}`}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${p === safePage ? 'bg-blue-900 text-white border-blue-900 shadow-md' : 'bg-white text-gray-600 border-gray-200 hover:bg-blue-50 hover:border-blue-200'}`}
                             >
                               {p}
                             </button>
@@ -3006,25 +3043,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               </>
             ) : tuitionSubTab === 'health' ? (
               <>
-                <div className="flex justify-end mb-4"><button onClick={() => { setEditingHealth(null); setIsHealthModalOpen(true); }} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức BHYT</button></div>
+                <div className="flex justify-end mb-4"><button onClick={() => { setEditingHealth(null); setIsHealthModalOpen(true); }} className="px-6 py-2.5 bg-blue-600 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-blue-600/20 hover:bg-blue-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức BHYT</button></div>
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                    <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                       <tr><th className="px-8 py-4">Mã BH</th><th className="px-8 py-4">Mô tả / Thời hạn</th><th className="px-8 py-4 text-center">Số tiền (VNĐ)</th><th className="px-8 py-4 text-center">Thao tác</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 text-sm">{healthConfigs.length === 0 ? (<tr><td colSpan={4} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình BHYT nào</td></tr>) : (healthConfigs.map(config => (<tr key={config.id} className="hover:bg-gray-50/50 transition-colors"><td className="px-8 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td><td className="px-8 py-5 text-gray-700 font-medium">{config.description}</td><td className="px-8 py-5 text-center"><span className="text-blue-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td><td className="px-8 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingHealth(config); setIsHealthModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteHealth(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td></tr>)))}</tbody>
+                    <tbody className="divide-y divide-gray-100 text-[0.85rem]">{healthConfigs.length === 0 ? (<tr><td colSpan={4} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình BHYT nào</td></tr>) : (healthConfigs.map(config => (<tr key={config.id} className="hover:bg-gray-50/50 transition-colors"><td className="px-8 py-5 font-mono text-xs text-blue-600 font-bold">{config.code}</td><td className="px-8 py-5 text-gray-700 font-medium">{config.description}</td><td className="px-8 py-5 text-center"><span className="text-blue-600 font-bold text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-xs text-gray-400 font-bold ml-1">đ</span></td><td className="px-8 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingHealth(config); setIsHealthModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteHealth(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td></tr>)))}</tbody>
                   </table>
                 </div>
               </>
             ) : tuitionSubTab === 'comprehensive' ? (
               <>
-                <div className="flex justify-end mb-4"><button onClick={() => { setEditingComprehensive(null); setIsComprehensiveModalOpen(true); }} className="px-6 py-2.5 bg-orange-600 text-white rounded-xl text-sm font-bold shadow-lg shadow-orange-600/20 hover:bg-orange-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức BH toàn diện</button></div>
+                <div className="flex justify-end mb-4"><button onClick={() => { setEditingComprehensive(null); setIsComprehensiveModalOpen(true); }} className="px-6 py-2.5 bg-orange-600 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-orange-600/20 hover:bg-orange-700 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức BH toàn diện</button></div>
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                    <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                       <tr><th className="px-8 py-4">Mã BH</th><th className="px-8 py-4">Mô tả / Thời hạn</th><th className="px-8 py-4 text-center">Số tiền (VNĐ)</th><th className="px-8 py-4 text-center">Thao tác</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 text-sm">{comprehensiveConfigs.length === 0 ? (<tr><td colSpan={4} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình BH toàn diện nào</td></tr>) : (comprehensiveConfigs.map(config => (<tr key={config.id} className="hover:bg-gray-50/50 transition-colors"><td className="px-8 py-5 font-mono text-xs text-orange-600 font-bold">{config.code}</td><td className="px-8 py-5 text-gray-700 font-medium">{config.description}</td><td className="px-8 py-5 text-center"><span className="text-orange-600 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td><td className="px-8 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingComprehensive(config); setIsComprehensiveModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteComprehensive(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td></tr>)))}</tbody>
+                    <tbody className="divide-y divide-gray-100 text-[0.85rem]">{comprehensiveConfigs.length === 0 ? (<tr><td colSpan={4} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình BH toàn diện nào</td></tr>) : (comprehensiveConfigs.map(config => (<tr key={config.id} className="hover:bg-gray-50/50 transition-colors"><td className="px-8 py-5 font-mono text-xs text-orange-600 font-bold">{config.code}</td><td className="px-8 py-5 text-gray-700 font-medium">{config.description}</td><td className="px-8 py-5 text-center"><span className="text-orange-600 font-bold text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-xs text-gray-400 font-bold ml-1">đ</span></td><td className="px-8 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingComprehensive(config); setIsComprehensiveModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteComprehensive(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td></tr>)))}</tbody>
                   </table>
                 </div>
               </>
@@ -3036,7 +3073,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                     <button
                       key={tab.key}
                       onClick={() => setActiveBankTab(tab.key)}
-                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-black transition-all ${activeBankTab === tab.key ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
+                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all ${activeBankTab === tab.key ? 'bg-white shadow text-gray-900' : 'text-gray-400 hover:text-gray-600'}`}
                     >
                       {tab.label}
                     </button>
@@ -3050,16 +3087,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                         <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
                       </div>
                       <div>
-                        <h3 className="font-black text-gray-900 text-lg">{tab.label}</h3>
+                        <h3 className="font-bold text-gray-900 text-[1.1rem]">{tab.label}</h3>
                         <p className="text-gray-400 text-xs">Mã QR sẽ tự động dùng tài khoản này khi in hóa đơn cho cơ sở này</p>
                       </div>
                     </div>
 
                     <div className="grid grid-cols-1 gap-4">
                       <div>
-                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Ngân hàng</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Ngân hàng</label>
                         <select
-                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-[0.85rem] font-medium outline-none focus:ring-2 focus:ring-emerald-500/20"
                           value={bankConfigs[tab.key].bankId}
                           onChange={e => setBankConfigs(p => ({ ...p, [tab.key]: { ...p[tab.key], bankId: e.target.value } }))}
                         >
@@ -3082,25 +3119,25 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Số tài khoản</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Số tài khoản</label>
                         <input type="text" placeholder="Ví dụ: 1234567890"
-                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono"
+                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-[0.85rem] outline-none focus:ring-2 focus:ring-emerald-500/20 font-mono"
                           value={bankConfigs[tab.key].accountNumber}
                           onChange={e => setBankConfigs(p => ({ ...p, [tab.key]: { ...p[tab.key], accountNumber: e.target.value } }))}
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Tên chủ tài khoản</label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Tên chủ tài khoản</label>
                         <input type="text" placeholder="Ví dụ: TRUONG CAO DANG HANG HAI VA DUONG THUY I"
-                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 uppercase"
+                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-[0.85rem] outline-none focus:ring-2 focus:ring-emerald-500/20 uppercase"
                           value={bankConfigs[tab.key].accountName}
                           onChange={e => setBankConfigs(p => ({ ...p, [tab.key]: { ...p[tab.key], accountName: e.target.value.toUpperCase() } }))}
                         />
                       </div>
                       <div>
-                        <label className="block text-xs font-black text-gray-500 uppercase tracking-wider mb-1.5">Chi nhánh <span className="text-gray-300 font-normal normal-case">(tùy chọn)</span></label>
+                        <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1.5">Chi nhánh <span className="text-gray-300 font-normal normal-case">(tùy chọn)</span></label>
                         <input type="text" placeholder="Ví dụ: Chi nhánh Hải Phòng"
-                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500/20"
+                          className="w-full bg-gray-50 border border-gray-200 px-4 py-2.5 rounded-xl text-[0.85rem] outline-none focus:ring-2 focus:ring-emerald-500/20"
                           value={bankConfigs[tab.key].branch}
                           onChange={e => setBankConfigs(p => ({ ...p, [tab.key]: { ...p[tab.key], branch: e.target.value } }))}
                         />
@@ -3117,10 +3154,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                           onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }}
                         />
                         <div>
-                          <p className="font-black text-emerald-800 text-sm">{bankConfigs[tab.key].accountName || '(Chưa nhập tên)'}</p>
-                          <p className="text-emerald-700 font-mono text-sm mt-0.5">{bankConfigs[tab.key].accountNumber}</p>
+                          <p className="font-bold text-emerald-800 text-[0.85rem]">{bankConfigs[tab.key].accountName || '(Chưa nhập tên)'}</p>
+                          <p className="text-emerald-700 font-mono text-[0.85rem] mt-0.5">{bankConfigs[tab.key].accountNumber}</p>
                           <p className="text-emerald-600 text-xs mt-0.5">{bankConfigs[tab.key].bankId}{bankConfigs[tab.key].branch ? ` · ${bankConfigs[tab.key].branch}` : ''}</p>
-                          <p className="text-emerald-500 text-[10px] mt-2 italic">* Đây là QR mẫu với số tiền 100.000đ</p>
+                          <p className="text-emerald-500 text-xs mt-2 italic">* Đây là QR mẫu với số tiền 100.000đ</p>
                         </div>
                       </div>
                     )}
@@ -3146,7 +3183,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                         } catch { alert('❌ Lỗi khi lưu. Vui lòng thử lại.'); }
                         finally { setIsSavingBank(false); }
                       }}
-                      className="w-full py-3 bg-emerald-600 text-white rounded-xl font-black text-sm hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                      className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold text-[0.85rem] hover:bg-emerald-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {isSavingBank ? (
                         <><svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>Đang lưu...</>
@@ -3160,13 +3197,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
 
             ) : (
               <>
-                <div className="flex justify-end mb-4"><button onClick={() => { setEditingUniform(null); setIsUniformModalOpen(true); }} className="px-6 py-2.5 bg-slate-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-slate-700/20 hover:bg-slate-800 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức đồng phục</button></div>
+                <div className="flex justify-end mb-4"><button onClick={() => { setEditingUniform(null); setIsUniformModalOpen(true); }} className="px-6 py-2.5 bg-slate-700 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-slate-700/20 hover:bg-slate-800 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm mức đồng phục</button></div>
                 <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                   <table className="w-full text-left">
-                    <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                    <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                       <tr><th className="px-8 py-4">Mã ĐP</th><th className="px-8 py-4">Mô tả bộ đồng phục</th><th className="px-8 py-4 text-center">Số tiền (VNĐ)</th><th className="px-8 py-4 text-center">Thao tác</th></tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100 text-sm">{uniformConfigs.length === 0 ? (<tr><td colSpan={4} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình đồng phục nào</td></tr>) : (uniformConfigs.map(config => (<tr key={config.id} className="hover:bg-gray-50/50 transition-colors"><td className="px-8 py-5 font-mono text-xs text-slate-600 font-bold">{config.code}</td><td className="px-8 py-5 text-gray-700 font-medium">{config.description}</td><td className="px-8 py-5 text-center"><span className="text-slate-800 font-black text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-[10px] text-gray-400 font-bold ml-1">đ</span></td><td className="px-8 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingUniform(config); setIsUniformModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteUniform(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td></tr>)))}</tbody>
+                    <tbody className="divide-y divide-gray-100 text-[0.85rem]">{uniformConfigs.length === 0 ? (<tr><td colSpan={4} className="px-8 py-10 text-center text-gray-400 italic">Chưa có cấu hình đồng phục nào</td></tr>) : (uniformConfigs.map(config => (<tr key={config.id} className="hover:bg-gray-50/50 transition-colors"><td className="px-8 py-5 font-mono text-xs text-slate-600 font-bold">{config.code}</td><td className="px-8 py-5 text-gray-700 font-medium">{config.description}</td><td className="px-8 py-5 text-center"><span className="text-slate-800 font-bold text-base">{config.amount.toLocaleString('vi-VN')}</span><span className="text-xs text-gray-400 font-bold ml-1">đ</span></td><td className="px-8 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingUniform(config); setIsUniformModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all" title="Chỉnh sửa"><EditIcon /></button><button onClick={() => handleDeleteUniform(config.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa"><DeleteIcon /></button></div></td></tr>)))}</tbody>
                   </table>
                 </div>
               </>
@@ -3177,18 +3214,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div className="max-w-7xl mx-auto space-y-6">
               <header className="flex justify-between items-center mb-8">
                 <div>
-                  <h2 className="text-3xl font-black text-blue-950 tracking-tight">Phân quyền người dùng</h2>
-                  <p className="text-gray-500 text-sm font-medium mt-1">Quản lý tài khoản cán bộ và quyền truy cập hệ thống</p>
+                  <h2 className="text-3xl font-bold text-blue-950 tracking-tight">Phân quyền người dùng</h2>
+                  <p className="text-gray-500 text-[0.85rem] font-medium mt-1">Quản lý tài khoản cán bộ và quyền truy cập hệ thống</p>
                 </div>
-                <button onClick={() => { setEditingUser(null); setSelectedRole('Cán bộ tiếp nhận'); setIsUserModalOpen(true); }} className="px-6 py-2.5 bg-blue-900 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm người dùng</button>
+                <button onClick={() => { setEditingUser(null); setSelectedRole('Cán bộ tiếp nhận'); setIsUserModalOpen(true); }} className="px-6 py-2.5 bg-blue-900 text-white rounded-xl text-[0.85rem] font-bold shadow-lg shadow-blue-900/20 hover:bg-blue-800 transition-all flex items-center gap-2"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>Thêm người dùng</button>
               </header>
               <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
                 <table className="w-full text-left">
-                  <thead className="bg-gray-50/80 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                  <thead className="bg-gray-50/80 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                     <tr><th className="px-8 py-4">Họ và tên</th><th className="px-8 py-4">Tên đăng nhập</th><th className="px-8 py-4">Vai trò</th><th className="px-8 py-4 text-center">Trạng thái</th><th className="px-8 py-4 text-center">Thao tác</th></tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 text-sm">
-                    {users.map(userItem => (<tr key={userItem.id} className="hover:bg-gray-50 transition-colors"><td className="px-8 py-5"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-black">{userItem.fullName.charAt(0)}</div><div><p className="font-bold text-blue-900">{userItem.fullName}</p><p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">ID: #{userItem.id}</p></div></div></td><td className="px-8 py-5 text-gray-600 font-medium">{userItem.username}</td><td className="px-8 py-5"><span className={`px-3 py-1 rounded-lg text-[10px] font-black border uppercase ${userItem.role === 'Quản trị viên' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{userItem.role}</span></td><td className="px-8 py-5 text-center"><span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter border ${userItem.status === 'Hoạt động' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>{userItem.status}</span></td><td className="px-8 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingUser(userItem); setSelectedRole(userItem.role); setIsUserModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><EditIcon /></button><button onClick={() => handleToggleStaffStatus(userItem)} className={`p-2 rounded-lg transition-all ${userItem.status === 'Hoạt động' ? 'text-orange-500 hover:bg-orange-50' : 'text-green-500 hover:bg-green-50'}`} title={userItem.status === 'Hoạt động' ? 'Khóa tài khoản' : 'Mở khóa'}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg></button><button onClick={() => handleDeleteStaff(userItem.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa tài khoản"><DeleteIcon /></button></div></td></tr>))}
+                  <tbody className="divide-y divide-gray-100 text-[0.85rem]">
+                    {users.map(userItem => (<tr key={userItem.id} className="hover:bg-gray-50 transition-colors"><td className="px-8 py-5"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">{userItem.fullName.charAt(0)}</div><div><p className="font-bold text-blue-900">{userItem.fullName}</p><p className="text-xs text-gray-400 font-bold uppercase tracking-wider">ID: #{userItem.id}</p></div></div></td><td className="px-8 py-5 text-gray-600 font-medium">{userItem.username}</td><td className="px-8 py-5"><span className={`px-3 py-1 rounded-lg text-xs font-bold border uppercase ${userItem.role === 'Quản trị viên' ? 'bg-purple-50 text-purple-600 border-purple-100' : 'bg-blue-50 text-blue-600 border-blue-100'}`}>{userItem.role}</span></td><td className="px-8 py-5 text-center"><span className={`px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-tighter border ${userItem.status === 'Hoạt động' ? 'bg-green-50 text-green-600 border-green-200' : 'bg-red-50 text-red-600 border-red-200'}`}>{userItem.status}</span></td><td className="px-8 py-5 text-center"><div className="flex justify-center gap-4"><button onClick={() => { setEditingUser(userItem); setSelectedRole(userItem.role); setIsUserModalOpen(true); }} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"><EditIcon /></button><button onClick={() => handleToggleStaffStatus(userItem)} className={`p-2 rounded-lg transition-all ${userItem.status === 'Hoạt động' ? 'text-orange-500 hover:bg-orange-50' : 'text-green-500 hover:bg-green-50'}`} title={userItem.status === 'Hoạt động' ? 'Khóa tài khoản' : 'Mở khóa'}><svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg></button><button onClick={() => handleDeleteStaff(userItem.id)} className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all" title="Xóa tài khoản"><DeleteIcon /></button></div></td></tr>))}
                   </tbody>
                 </table>
               </div>
@@ -3200,14 +3237,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       {isUserModalOpen && (
         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-blue-900 p-6 flex justify-between items-center"><h3 className="text-white font-black uppercase tracking-widest text-sm">{editingUser ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}</h3><button onClick={() => setIsUserModalOpen(false)} className="text-white/60 hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+            <div className="bg-blue-900 p-6 flex justify-between items-center"><h3 className="text-white font-bold uppercase tracking-widest text-[0.85rem]">{editingUser ? 'Chỉnh sửa tài khoản' : 'Thêm tài khoản mới'}</h3><button onClick={() => setIsUserModalOpen(false)} className="text-white/60 hover:text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
             <form className="p-8 space-y-4" onSubmit={handleSaveStaff}>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Họ và tên</label><input name="fullName" defaultValue={editingUser?.fullName} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold text-blue-900" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tên đăng nhập</label><input name="username" defaultValue={editingUser?.username} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-medium" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Mật khẩu</label><input name="password" type="password" required={!editingUser} placeholder={editingUser ? "•••••••• (Bỏ trống nếu không đổi)" : "••••••••"} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-medium" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Tên cơ sở {selectedRole !== 'Quản trị viên' && <span className="text-red-500">*</span>}</label><select name="campus" required={selectedRole !== 'Quản trị viên'} defaultValue={editingUser?.campus || ''} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="">-- Chọn cơ sở --</option>{campusConfigs.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-1">Vai trò hệ thống</label><select name="role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as any)} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="Quản trị viên">Quản trị viên</option><option value="Cán bộ tiếp nhận">Cán bộ tiếp nhận</option><option value="Cán bộ duyệt hồ sơ">Cán bộ duyệt hồ sơ</option><option value="Kế toán">Kế toán</option></select></div>
-              <div className="pt-4"><button type="submit" className="w-full bg-blue-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest shadow-xl">Lưu thông tin</button></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Họ và tên</label><input name="fullName" defaultValue={editingUser?.fullName} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold text-blue-900" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Tên đăng nhập</label><input name="username" defaultValue={editingUser?.username} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-medium" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Mật khẩu</label><input name="password" type="password" required={!editingUser} placeholder={editingUser ? "•••••••• (Bỏ trống nếu không đổi)" : "••••••••"} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-medium" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Tên cơ sở {selectedRole !== 'Quản trị viên' && <span className="text-red-500">*</span>}</label><select name="campus" required={selectedRole !== 'Quản trị viên'} defaultValue={editingUser?.campus || ''} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="">-- Chọn cơ sở --</option>{campusConfigs.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest px-1">Vai trò hệ thống</label><select name="role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value as any)} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20fill%3D%22none%22%20viewBox%3D%220%200%2020%2020%22%3E%3Cpath%20stroke%3D%22%236b7280%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%20stroke-width%3D%221.5%22%20d%3D%22m6%208%204%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem_1.25rem] bg-[right_0.75rem_center] bg-no-repeat"><option value="Quản trị viên">Quản trị viên</option><option value="Cán bộ tiếp nhận">Cán bộ tiếp nhận</option><option value="Cán bộ duyệt hồ sơ">Cán bộ duyệt hồ sơ</option><option value="Kế toán">Kế toán</option></select></div>
+              <div className="pt-4"><button type="submit" className="w-full bg-blue-900 text-white py-4 rounded-2xl font-bold uppercase tracking-widest shadow-xl">Lưu thông tin</button></div>
             </form>
           </div>
         </div>
@@ -3216,12 +3253,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       {isCampusModalOpen && (
         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-indigo-600 p-6 flex justify-between items-center text-white"><h3 className="font-black uppercase tracking-widest text-sm">{editingCampus ? 'Cập nhật cơ sở' : 'Thêm cơ sở mới'}</h3><button onClick={() => setIsCampusModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+            <div className="bg-indigo-600 p-6 flex justify-between items-center text-white"><h3 className="font-bold uppercase tracking-widest text-[0.85rem]">{editingCampus ? 'Cập nhật cơ sở' : 'Thêm cơ sở mới'}</h3><button onClick={() => setIsCampusModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
             <form className="p-8 space-y-6" onSubmit={handleSaveCampus}>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã cơ sở</label><input name="code" defaultValue={editingCampus?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-mono text-sm" placeholder="Ví dụ: HP, ND, DN..." /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tên cơ sở</label><input name="name" defaultValue={editingCampus?.name} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Địa chỉ</label><textarea name="address" rows={2} defaultValue={editingCampus?.address} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none resize-none" /></div>
-              <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black uppercase">Lưu cơ sở</button>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mã cơ sở</label><input name="code" defaultValue={editingCampus?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-mono text-[0.85rem]" placeholder="Ví dụ: HP, ND, DN..." /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tên cơ sở</label><input name="name" defaultValue={editingCampus?.name} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Địa chỉ</label><textarea name="address" rows={2} defaultValue={editingCampus?.address} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none resize-none" /></div>
+              <button type="submit" className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-bold uppercase">Lưu cơ sở</button>
             </form>
           </div>
         </div>
@@ -3230,12 +3267,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       {isEducationLevelModalOpen && (
         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-blue-600 p-6 flex justify-between items-center text-white"><h3 className="font-black uppercase tracking-widest text-sm">{editingEducationLevel ? 'Cập nhật hệ đào tạo' : 'Thêm hệ đào tạo mới'}</h3><button onClick={() => setIsEducationLevelModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+            <div className="bg-blue-600 p-6 flex justify-between items-center text-white"><h3 className="font-bold uppercase tracking-widest text-[0.85rem]">{editingEducationLevel ? 'Cập nhật hệ đào tạo' : 'Thêm hệ đào tạo mới'}</h3><button onClick={() => setIsEducationLevelModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
             <form className="p-8 space-y-6" onSubmit={handleSaveEducationLevel}>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã hệ đào tạo</label><input name="code" defaultValue={editingEducationLevel?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-mono text-sm" placeholder="Ví dụ: CD, TC, 9+..." /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tên hệ đào tạo</label><input name="name" defaultValue={editingEducationLevel?.name} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mô tả</label><textarea name="description" rows={2} defaultValue={editingEducationLevel?.description} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none resize-none" /></div>
-              <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase">Lưu hệ đào tạo</button>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mã hệ đào tạo</label><input name="code" defaultValue={editingEducationLevel?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-mono text-[0.85rem]" placeholder="Ví dụ: CD, TC, 9+..." /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tên hệ đào tạo</label><input name="name" defaultValue={editingEducationLevel?.name} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none font-bold" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mô tả</label><textarea name="description" rows={2} defaultValue={editingEducationLevel?.description} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none resize-none" /></div>
+              <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold uppercase">Lưu hệ đào tạo</button>
             </form>
           </div>
         </div>
@@ -3244,13 +3281,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       {isTuitionModalOpen && (
         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-emerald-600 p-6 flex justify-between items-center text-white"><h3 className="font-black uppercase tracking-widest text-sm">{editingTuition ? 'Cập nhật học phí' : 'Thêm học phí mới'}</h3><button onClick={() => setIsTuitionModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+            <div className="bg-emerald-600 p-6 flex justify-between items-center text-white"><h3 className="font-bold uppercase tracking-widest text-[0.85rem]">{editingTuition ? 'Cập nhật học phí' : 'Thêm học phí mới'}</h3><button onClick={() => setIsTuitionModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
             <form className="p-8 space-y-6" onSubmit={handleSaveTuition}>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã nghề <span className="text-red-500">*</span></label><input name="code" defaultValue={editingTuition?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" placeholder="Mã nghề tự động" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Tên nghề</label><input name="name" defaultValue={editingTuition?.name} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cơ sở</label><select name="campus" defaultValue={editingTuition?.campus || (campusConfigs.length > 0 ? campusConfigs[0].name : '')} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none">{campusConfigs.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div><div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Hệ đào tạo</label><select name="educationLevel" defaultValue={editingTuition?.educationLevel || (educationLevelConfigs.length > 0 ? educationLevelConfigs[0].name : '')} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none">{educationLevelConfigs.map(el => <option key={el.id} value={el.name}>{el.name}</option>)}</select></div></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số tiền</label><input name="amount" type="number" defaultValue={editingTuition?.amount} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-black uppercase">Lưu cấu hình</button>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mã nghề <span className="text-red-500">*</span></label><input name="code" defaultValue={editingTuition?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" placeholder="Mã nghề tự động" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Tên nghề</label><input name="name" defaultValue={editingTuition?.name} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <div className="grid grid-cols-2 gap-4"><div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Cơ sở</label><select name="campus" defaultValue={editingTuition?.campus || (campusConfigs.length > 0 ? campusConfigs[0].name : '')} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none">{campusConfigs.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}</select></div><div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Hệ đào tạo</label><select name="educationLevel" defaultValue={editingTuition?.educationLevel || (educationLevelConfigs.length > 0 ? educationLevelConfigs[0].name : '')} className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none">{educationLevelConfigs.map(el => <option key={el.id} value={el.name}>{el.name}</option>)}</select></div></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Số tiền</label><input name="amount" type="number" defaultValue={editingTuition?.amount} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <button type="submit" className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold uppercase">Lưu cấu hình</button>
             </form>
           </div>
         </div>
@@ -3259,12 +3296,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       {isHealthModalOpen && (
         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-blue-600 p-6 flex justify-between items-center text-white"><h3 className="font-black uppercase tracking-widest text-sm">{editingHealth ? 'Cập nhật BHYT' : 'Thêm mức BHYT mới'}</h3><button onClick={() => setIsHealthModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+            <div className="bg-blue-600 p-6 flex justify-between items-center text-white"><h3 className="font-bold uppercase tracking-widest text-[0.85rem]">{editingHealth ? 'Cập nhật BHYT' : 'Thêm mức BHYT mới'}</h3><button onClick={() => setIsHealthModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
             <form className="p-8 space-y-6" onSubmit={handleSaveHealth}>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã bảo hiểm</label><input name="code" defaultValue={editingHealth?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mô tả / Thời hạn</label><input name="description" defaultValue={editingHealth?.description} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số tiền</label><input name="amount" type="number" defaultValue={editingHealth?.amount} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-black uppercase">Lưu cấu hình</button>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mã bảo hiểm</label><input name="code" defaultValue={editingHealth?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mô tả / Thời hạn</label><input name="description" defaultValue={editingHealth?.description} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Số tiền</label><input name="amount" type="number" defaultValue={editingHealth?.amount} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <button type="submit" className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold uppercase">Lưu cấu hình</button>
             </form>
           </div>
         </div>
@@ -3273,12 +3310,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       {isComprehensiveModalOpen && (
         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-orange-600 p-6 flex justify-between items-center text-white"><h3 className="font-black uppercase tracking-widest text-sm">{editingComprehensive ? 'Cập nhật BH toàn diện' : 'Thêm mức BH toàn diện mới'}</h3><button onClick={() => setIsComprehensiveModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+            <div className="bg-orange-600 p-6 flex justify-between items-center text-white"><h3 className="font-bold uppercase tracking-widest text-[0.85rem]">{editingComprehensive ? 'Cập nhật BH toàn diện' : 'Thêm mức BH toàn diện mới'}</h3><button onClick={() => setIsComprehensiveModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
             <form className="p-8 space-y-6" onSubmit={handleSaveComprehensive}>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã bảo hiểm</label><input name="code" defaultValue={editingComprehensive?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mô tả / Thời hạn</label><input name="description" defaultValue={editingComprehensive?.description} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số tiền</label><input name="amount" type="number" defaultValue={editingComprehensive?.amount} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <button type="submit" className="w-full bg-orange-600 text-white py-4 rounded-2xl font-black uppercase">Lưu cấu hình</button>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mã bảo hiểm</label><input name="code" defaultValue={editingComprehensive?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mô tả / Thời hạn</label><input name="description" defaultValue={editingComprehensive?.description} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Số tiền</label><input name="amount" type="number" defaultValue={editingComprehensive?.amount} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <button type="submit" className="w-full bg-orange-600 text-white py-4 rounded-2xl font-bold uppercase">Lưu cấu hình</button>
             </form>
           </div>
         </div>
@@ -3287,12 +3324,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       {isUniformModalOpen && (
         <div className="fixed inset-0 bg-blue-950/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="bg-slate-700 p-6 flex justify-between items-center text-white"><h3 className="font-black uppercase tracking-widest text-sm">{editingUniform ? 'Cập nhật đồng phục' : 'Thêm mức đồng phục mới'}</h3><button onClick={() => setIsUniformModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
+            <div className="bg-slate-700 p-6 flex justify-between items-center text-white"><h3 className="font-bold uppercase tracking-widest text-[0.85rem]">{editingUniform ? 'Cập nhật đồng phục' : 'Thêm mức đồng phục mới'}</h3><button onClick={() => setIsUniformModalOpen(false)}><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button></div>
             <form className="p-8 space-y-6" onSubmit={handleSaveUniform}>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mã đồng phục</label><input name="code" defaultValue={editingUniform?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Mô tả chi tiết</label><input name="description" defaultValue={editingUniform?.description} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <div className="space-y-1"><label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Số tiền</label><input name="amount" type="number" defaultValue={editingUniform?.amount} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
-              <button type="submit" className="w-full bg-slate-700 text-white py-4 rounded-2xl font-black uppercase">Lưu cấu hình</button>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mã đồng phục</label><input name="code" defaultValue={editingUniform?.code} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Mô tả chi tiết</label><input name="description" defaultValue={editingUniform?.description} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <div className="space-y-1"><label className="text-xs font-bold text-gray-400 uppercase tracking-widest">Số tiền</label><input name="amount" type="number" defaultValue={editingUniform?.amount} required className="w-full bg-gray-50 border rounded-xl px-4 py-3 outline-none" /></div>
+              <button type="submit" className="w-full bg-slate-700 text-white py-4 rounded-2xl font-bold uppercase">Lưu cấu hình</button>
             </form>
           </div>
         </div>
@@ -3301,52 +3338,129 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       {selectedSubmission && (
         <div className="fixed inset-0 bg-blue-950/60 backdrop-blur-md z-[100] flex items-center justify-center p-4">
           <div className="bg-white rounded-[2.5rem] w-full max-w-7xl max-h-[95vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in duration-300">
-            <div className="bg-blue-900 px-10 py-3 flex justify-between items-center shrink-0 border-b border-white/10">
+            {/* Header */}
+            <div className={`px-10 py-3 flex justify-between items-center shrink-0 border-b border-white/10 transition-colors ${isEditingSubmission ? 'bg-amber-700' : 'bg-blue-900'}`}>
               <div className="flex items-center gap-6">
                 <div className="w-16 h-16 bg-white/10 rounded-[1.25rem] flex items-center justify-center border border-white/20"><svg className="w-10 h-10 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg></div>
-                <div><h3 className="text-2xl font-black text-white uppercase tracking-tight leading-none">{selectedSubmission.fullName}</h3><div className="flex items-center gap-3 mt-2"><span className="text-blue-300 font-bold text-xs uppercase tracking-widest">Mã hồ sơ: {selectedSubmission.idNumber}</span><span className={`px-3 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest border ${getStatusStyle(selectedSubmission.status)}`}>{selectedSubmission.status}</span></div></div>
-              </div>
-              <button onClick={() => setSelectedSubmission(null)} className="w-12 h-12 rounded-full bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
-            </div>
-            <div className="flex-1 overflow-y-auto p-10 bg-[#f8fafc]">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-                <div className="lg:col-span-2 space-y-10">
-                  <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6">
-                    <h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">1. Thông tin cá nhân & Liên hệ</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Giới tính" value={selectedSubmission.gender} /><DetailItem label="Ngày sinh" value={formatDateValue(selectedSubmission.dob) || '--'} /><DetailItem label="Nơi sinh" value={selectedSubmission.pob} /><DetailItem label="Dân tộc" value={selectedSubmission.ethnicity} /><DetailItem label="Ngày cấp CCCD" value={formatDateValue(selectedSubmission.issueDate) || '--'} /><DetailItem label="Nơi cấp" value={selectedSubmission.issuePlace} colSpan={2} /><DetailItem label="Số điện thoại" value={selectedSubmission.phone} highlight /><DetailItem label="Email" value={selectedSubmission.email} colSpan={2} /><DetailItem label="Họ tên phụ huynh" value={selectedSubmission.parentName} /><DetailItem label="SĐT phụ huynh" value={selectedSubmission.parentPhone} /></div>
+                <div>
+                  <h3 className="text-2xl font-bold text-white uppercase tracking-tight leading-none">
+                    {isEditingSubmission ? (editSubmissionData.fullName || selectedSubmission.fullName) : selectedSubmission.fullName}
+                    {isEditingSubmission && <span className="ml-3 text-xs font-bold text-amber-200 normal-case tracking-normal">— Đang chỉnh sửa</span>}
+                  </h3>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-blue-300 font-bold text-xs uppercase tracking-widest">Mã hồ sơ: {selectedSubmission.idNumber}</span>
+                    <span className={`px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-widest border ${getStatusStyle(selectedSubmission.status)}`}>{selectedSubmission.status}</span>
                   </div>
-                  <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">2. Địa chỉ thường trú (VNeID)</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Tỉnh / Thành phố" value={selectedSubmission.province} /><DetailItem label="Quận / Huyện, Xã / Phường" value={selectedSubmission.district} /><DetailItem label="Số nhà, đường, xóm" value={selectedSubmission.addressDetails} /></div></div>
-                  <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">3. Thông tin gửi giấy báo kết quả</h4><div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Người nhận" value={selectedSubmission.recipient} /><DetailItem label="Địa chỉ nhận" value={selectedSubmission.deliveryAddress} />{selectedSubmission.deliveryAddress === AddressType.OTHER && <DetailItem label="Địa chỉ chi tiết" value={selectedSubmission.deliveryAddressDetails} colSpan={2} />}</div></div>
-                  <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">4. Nguyện vọng & Học vấn</h4><div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4"><DetailItem label="Địa điểm nhập học" value={selectedSubmission.campus} highlight /><DetailItem label="Hệ đào tạo" value={selectedSubmission.educationLevel} highlight /><DetailItem label="Năm tốt nghiệp" value={selectedSubmission.gradYear} /><DetailItem label="Trường tốt nghiệp" value={selectedSubmission.gradSchool} /><DetailItem label="Nguyện vọng 1" value={selectedSubmission.choice1Major} colSpan={2} highlight /><DetailItem label="Mã nghề" value={selectedSubmission.choice1Specialty} /><DetailItem label="NV 2" value={selectedSubmission.choice2Major} /></div></div>
-                  <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-6"><h4 className="text-blue-900 font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-900 pl-4">5. Bảng điểm học tập (Lớp cuối cấp)</h4><div className="grid grid-cols-5 md:grid-cols-10 gap-2 pt-2">{SUBJECTS.map(sub => (<div key={sub} className="flex flex-col items-center bg-gray-50 rounded-xl p-2 border border-gray-100"><span className="text-[8px] font-black text-gray-400 uppercase mb-1">{sub}</span><span className="text-xs font-black text-blue-900">{selectedSubmission.grades?.[sub] || '-'}</span></div>))}</div></div>
                 </div>
-                <div className="space-y-10">
-                  <div className="bg-blue-900 p-8 rounded-[2rem] shadow-xl space-y-6"><h4 className="text-white font-black uppercase text-xs tracking-[0.2em] border-l-4 border-blue-300 pl-4">6. Hồ sơ đính kèm</h4><div className="grid grid-cols-1 gap-6"><FilePreviewItem label="Mặt trước CCCD" src={selectedSubmission.frontId} /><FilePreviewItem label="Mặt sau CCCD" src={selectedSubmission.backId} /><FilePreviewItem label="Căn cước điện tử" src={selectedSubmission.electronicId} /><FilePreviewItem label="Bằng tốt nghiệp / Chứng nhận" src={selectedSubmission.diploma} /><FilePreviewItem label="Học bạ học tập" src={selectedSubmission.tempCert} /></div></div>
-                  <div className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100 flex flex-col items-center text-center gap-3"><div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><div><p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Kiểm soát viên</p><p className="text-xs text-emerald-800 font-bold mt-1">Hồ sơ đầy đủ & hợp lệ</p></div></div>
-                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                {!isEditingSubmission && (isAdmin || user?.role === 'Cán bộ duyệt hồ sơ') && (
+                  <button onClick={() => { setEditSubmissionData({ ...selectedSubmission }); setIsEditingSubmission(true); }} className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-2 transition-all">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                    Chỉnh sửa
+                  </button>
+                )}
+                <button onClick={() => { setSelectedSubmission(null); setIsEditingSubmission(false); setEditSubmissionData({}); }} className="w-12 h-12 rounded-full bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-all flex items-center justify-center"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg></button>
               </div>
             </div>
-            <div className="bg-white px-10 py-3 border-t border-gray-100 flex flex-wrap justify-between items-center gap-4 shrink-0">
-              <div className="flex gap-2">
-                <button onClick={() => updateCurrentSubmissionStatus(SubmissionStatus.RECEIVED)} className="px-6 py-3 bg-blue-50 text-blue-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-100 transition-all">Tiếp nhận</button>
-                {user?.role !== 'Cán bộ tiếp nhận' && (
-                  <>
-                    <button onClick={() => updateCurrentSubmissionStatus(SubmissionStatus.LOCKED)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-200 transition-all">Khóa hồ sơ</button>
-                    <button onClick={async () => {
-                      const newPass = Math.random().toString(36).slice(-6).toUpperCase();
-                      try {
-                        await api.updateRegistration(selectedSubmission.docId, { password: newPass });
-                        alert(`Mật khẩu mới cho hồ sơ ${selectedSubmission.idNumber} là: ${newPass}`);
-                        fetchData();
-                      } catch (err) { alert("Lỗi cấp lại mật khẩu"); }
-                    }} className="px-6 py-3 bg-yellow-100 text-yellow-700 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-yellow-200 transition-all">Cấp lại Mật khẩu</button>
-                  </>
-                )}
-              </div>
-              <div className="flex gap-4">
-                <button onClick={() => setSelectedSubmission(null)} className="px-8 py-3 text-gray-400 font-black uppercase text-[10px] tracking-widest hover:text-gray-600">Hủy bỏ</button>
-                {user?.role !== 'Cán bộ tiếp nhận' && <button onClick={handlePrintSubmission} className="px-10 py-3 bg-red-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-xl shadow-red-600/20 hover:bg-red-700 active:scale-95 transition-all">Duyệt & In giấy báo</button>}
-              </div>
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-10 bg-[#f8fafc]">
+              {(() => {
+                const EF = ({ label, field, type = 'text', colSpan = 1 }: { label: string; field: string; type?: string; colSpan?: number }) =>
+                  isEditingSubmission ? (
+                    <div className={`flex flex-col gap-1.5 ${colSpan === 2 ? 'col-span-2' : ''}`}>
+                      <span className="text-xs font-bold text-amber-700 uppercase tracking-widest">{label}</span>
+                      <input type={type} value={editSubmissionData[field] || ''} onChange={e => setEditSubmissionData(p => ({ ...p, [field]: e.target.value }))} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-[0.85rem] font-medium outline-none focus:ring-2 focus:ring-amber-400 focus:border-amber-400" />
+                    </div>
+                  ) : (<DetailItem label={label} value={(selectedSubmission as any)[field] || '--'} colSpan={colSpan} />);
+                const EFS = ({ label, field, options }: { label: string; field: string; options: string[] }) =>
+                  isEditingSubmission ? (
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-xs font-bold text-amber-700 uppercase tracking-widest">{label}</span>
+                      <select value={editSubmissionData[field] || ''} onChange={e => setEditSubmissionData(p => ({ ...p, [field]: e.target.value }))} className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 text-[0.85rem] font-medium outline-none focus:ring-2 focus:ring-amber-400">
+                        {options.map(o => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    </div>
+                  ) : (<DetailItem label={label} value={(selectedSubmission as any)[field] || '--'} />);
+                return (
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                    <div className="lg:col-span-2 space-y-10">
+                      <div className={`p-8 rounded-[2rem] border shadow-sm space-y-6 transition-colors ${isEditingSubmission ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+                        <h4 className={`font-bold uppercase text-xs tracking-[0.2em] border-l-4 pl-4 ${isEditingSubmission ? 'text-amber-800 border-amber-500' : 'text-blue-900 border-blue-900'}`}>1. Thông tin cá nhân &amp; Liên hệ</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+                          {isEditingSubmission
+                            ? <div className="col-span-2 md:col-span-4 flex flex-col gap-1.5"><span className="text-xs font-bold text-amber-700 uppercase tracking-widest">Họ và tên</span><input value={editSubmissionData.fullName || ''} onChange={e => setEditSubmissionData(p => ({ ...p, fullName: e.target.value }))} className="bg-amber-50 border-2 border-amber-400 rounded-lg px-3 py-2 text-base font-bold outline-none focus:ring-2 focus:ring-amber-500" placeholder="Nhập họ và tên..." /></div>
+                            : <DetailItem label="Họ và tên" value={selectedSubmission.fullName} colSpan={2} highlight />}
+                          <EFS label="Giới tính" field="gender" options={['Nam', 'Nữ', 'Khác']} />
+                          <EF label="Ngày sinh" field="dob" type="date" />
+                          <EF label="Nơi sinh" field="pob" />
+                          <EF label="Dân tộc" field="ethnicity" />
+                          <EF label="Ngày cấp CCCD" field="issueDate" type="date" />
+                          <EF label="Nơi cấp" field="issuePlace" colSpan={2} />
+                          <EF label="Số điện thoại" field="phone" type="tel" />
+                          <EF label="Email" field="email" type="email" colSpan={2} />
+                          <EF label="Họ tên phụ huynh" field="parentName" />
+                          <EF label="SĐT phụ huynh" field="parentPhone" type="tel" />
+                          {!isEditingSubmission && <DetailItem label="CCCD" value={selectedSubmission.idNumber} />}
+                        </div>
+                      </div>
+                      <div className={`p-8 rounded-[2rem] border shadow-sm space-y-6 transition-colors ${isEditingSubmission ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+                        <h4 className={`font-bold uppercase text-xs tracking-[0.2em] border-l-4 pl-4 ${isEditingSubmission ? 'text-amber-800 border-amber-500' : 'text-blue-900 border-blue-900'}`}>2. Địa chỉ thường trú (VNeID)</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><EF label="Tỉnh / Thành phố" field="province" /><EF label="Quận / Huyện, Xã / Phường" field="district" /><EF label="Số nhà, đường, xóm" field="addressDetails" /></div>
+                      </div>
+                      <div className={`p-8 rounded-[2rem] border shadow-sm space-y-6 ${isEditingSubmission ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+                        <h4 className={`font-bold uppercase text-xs tracking-[0.2em] border-l-4 pl-4 ${isEditingSubmission ? 'text-amber-800 border-amber-500' : 'text-blue-900 border-blue-900'}`}>3. Thông tin gửi giấy báo kết quả</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6"><DetailItem label="Người nhận" value={selectedSubmission.recipient} /><DetailItem label="Địa chỉ nhận" value={selectedSubmission.deliveryAddress} />{selectedSubmission.deliveryAddress === AddressType.OTHER && <DetailItem label="Địa chỉ chi tiết" value={selectedSubmission.deliveryAddressDetails} colSpan={2} />}</div>
+                      </div>
+                      <div className={`p-8 rounded-[2rem] border shadow-sm space-y-6 ${isEditingSubmission ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+                        <h4 className={`font-bold uppercase text-xs tracking-[0.2em] border-l-4 pl-4 ${isEditingSubmission ? 'text-amber-800 border-amber-500' : 'text-blue-900 border-blue-900'}`}>4. Nguyện vọng &amp; Học vấn</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+                          <DetailItem label="Địa điểm nhập học" value={selectedSubmission.campus} highlight />
+                          <DetailItem label="Hệ đào tạo" value={selectedSubmission.educationLevel} highlight />
+                          <EF label="Năm tốt nghiệp" field="gradYear" />
+                          <EF label="Trường tốt nghiệp" field="gradSchool" />
+                          <EF label="Nguyện vọng 1" field="choice1Major" colSpan={2} />
+                          <DetailItem label="Mã nghề NV1" value={selectedSubmission.choice1Specialty} />
+                          <EF label="Nguyện vọng 2" field="choice2Major" />
+                        </div>
+                      </div>
+                      <div className={`p-8 rounded-[2rem] border shadow-sm space-y-6 ${isEditingSubmission ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+                        <h4 className={`font-bold uppercase text-xs tracking-[0.2em] border-l-4 pl-4 ${isEditingSubmission ? 'text-amber-800 border-amber-500' : 'text-blue-900 border-blue-900'}`}>5. Bảng điểm học tập</h4>
+                        <div className="grid grid-cols-5 md:grid-cols-10 gap-2 pt-2">{SUBJECTS.map(sub => (<div key={sub} className="flex flex-col items-center bg-gray-50 rounded-xl p-2 border border-gray-100"><span className="text-xs font-bold text-gray-400 uppercase mb-1">{sub}</span><span className="text-xs font-bold text-blue-900">{selectedSubmission.grades?.[sub] || '-'}</span></div>))}</div>
+                      </div>
+                    </div>
+                    <div className="space-y-10">
+                      <div className="bg-blue-900 p-8 rounded-[2rem] shadow-xl space-y-6"><h4 className="text-white font-bold uppercase text-xs tracking-[0.2em] border-l-4 border-blue-300 pl-4">6. Hồ sơ đính kèm</h4><div className="grid grid-cols-1 gap-6"><FilePreviewItem label="Mặt trước CCCD" src={selectedSubmission.frontId} /><FilePreviewItem label="Mặt sau CCCD" src={selectedSubmission.backId} /><FilePreviewItem label="Căn cước điện tử" src={selectedSubmission.electronicId} /><FilePreviewItem label="Bằng tốt nghiệp / Chứng nhận" src={selectedSubmission.diploma} /><FilePreviewItem label="Học bạ học tập" src={selectedSubmission.tempCert} /></div></div>
+                      <div className="bg-emerald-50 p-6 rounded-[2rem] border border-emerald-100 flex flex-col items-center text-center gap-3"><div className="w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white"><svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg></div><div><p className="text-xs font-bold text-emerald-600 uppercase tracking-widest">Kiểm soát viên</p><p className="text-xs text-emerald-800 font-bold mt-1">Hồ sơ đầy đủ &amp; hợp lệ</p></div></div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            {/* Footer */}
+            <div className={`px-10 py-3 border-t flex flex-wrap justify-between items-center gap-4 shrink-0 transition-colors ${isEditingSubmission ? 'bg-amber-50 border-amber-200' : 'bg-white border-gray-100'}`}>
+              {isEditingSubmission ? (
+                <>
+                  <div className="text-xs text-amber-700 font-bold italic">✏️ Đang chỉnh sửa — các thay đổi chưa được lưu</div>
+                  <div className="flex gap-3">
+                    <button onClick={() => { setIsEditingSubmission(false); setEditSubmissionData({}); }} className="px-8 py-3 text-gray-500 font-bold uppercase text-xs tracking-widest hover:text-gray-700 bg-gray-100 rounded-2xl transition-all">Hủy chỉnh sửa</button>
+                    <button onClick={handleSaveSubmissionEdit} disabled={isSavingSubmission} className="px-10 py-3 bg-amber-600 text-white rounded-2xl text-xs font-bold uppercase tracking-[0.15em] shadow-xl shadow-amber-600/20 hover:bg-amber-700 active:scale-95 transition-all disabled:opacity-60 flex items-center gap-2">
+                      {isSavingSubmission ? <><svg className="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>Đang lưu...</> : <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>Lưu thay đổi</>}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex gap-2">
+                    <button onClick={() => updateCurrentSubmissionStatus(SubmissionStatus.RECEIVED)} className="px-6 py-3 bg-blue-50 text-blue-700 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-blue-100 transition-all">Tiếp nhận</button>
+                    {user?.role !== 'Cán bộ tiếp nhận' && (<><button onClick={() => updateCurrentSubmissionStatus(SubmissionStatus.LOCKED)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-gray-200 transition-all">Khóa hồ sơ</button><button onClick={async () => { const newPass = Math.random().toString(36).slice(-6).toUpperCase(); try { await api.updateRegistration(selectedSubmission.docId, { password: newPass }); alert(`Mật khẩu mới cho hồ sơ ${selectedSubmission.idNumber} là: ${newPass}`); fetchData(); } catch { alert("Lỗi cấp lại mật khẩu"); } }} className="px-6 py-3 bg-yellow-100 text-yellow-700 rounded-2xl text-xs font-bold uppercase tracking-widest hover:bg-yellow-200 transition-all">Cấp lại Mật khẩu</button></>)}
+                  </div>
+                  <div className="flex gap-4">
+                    <button onClick={() => setSelectedSubmission(null)} className="px-8 py-3 text-gray-400 font-bold uppercase text-xs tracking-widest hover:text-gray-600">Hủy bỏ</button>
+                    {user?.role !== 'Cán bộ tiếp nhận' && <button onClick={handlePrintSubmission} className="px-10 py-3 bg-red-600 text-white rounded-2xl text-xs font-bold uppercase tracking-[0.2em] shadow-xl shadow-red-600/20 hover:bg-red-700 active:scale-95 transition-all">Duyệt &amp; In giấy báo</button>}
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -3358,8 +3472,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-6">
               <div>
-                <h2 className="text-2xl font-black text-blue-950 tracking-tight">Nhật ký hoạt động</h2>
-                <p className="text-gray-500 text-sm mt-1">Lịch sử thao tác của tất cả tài khoản cán bộ</p>
+                <h2 className="text-2xl font-bold text-blue-950 tracking-tight">Nhật ký hoạt động</h2>
+                <p className="text-gray-500 text-[0.85rem] mt-1">Lịch sử thao tác của tất cả tài khoản cán bộ</p>
               </div>
               <div className="flex gap-2">
                 <button
@@ -3391,11 +3505,11 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
             <div className="bg-white rounded-2xl border border-gray-200 p-4 mb-4 flex gap-4 flex-wrap items-center">
               <div className="flex items-center gap-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Người dùng:</label>
-                <input type="text" placeholder="Lọc username..." value={logFilterUser} onChange={e => setLogFilterUser(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500" />
+                <input type="text" placeholder="Lọc username..." value={logFilterUser} onChange={e => setLogFilterUser(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-1.5 text-[0.85rem] focus:outline-none focus:border-blue-500" />
               </div>
               <div className="flex items-center gap-2">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">Hành động:</label>
-                <select value={logFilterAction} onChange={e => setLogFilterAction(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500">
+                <select value={logFilterAction} onChange={e => setLogFilterAction(e.target.value)} className="border border-gray-200 rounded-lg px-3 py-1.5 text-[0.85rem] focus:outline-none focus:border-blue-500">
                   <option value="">-- Tất cả --</option>
                   <option value="LOGIN">Đăng nhập</option>
                   <option value="LOGOUT">Đăng xuất</option>
@@ -3419,12 +3533,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               ) : activityLogs.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-gray-400">
                   <svg className="w-12 h-12 mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
-                  <p className="font-bold text-sm">Chưa có nhật ký nào</p>
+                  <p className="font-bold text-[0.85rem]">Chưa có nhật ký nào</p>
                   <p className="text-xs mt-1">Nhật ký xuất hiện khi cán bộ thực hiện thao tác</p>
                 </div>
               ) : (
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-gray-50 border-b border-gray-200 text-[10px] uppercase font-black text-gray-500 tracking-wider">
+                <table className="w-full text-left text-[0.85rem]">
+                  <thead className="bg-gray-50 border-b border-gray-200 text-xs uppercase font-bold text-gray-500 tracking-wider">
                     <tr>
                       <th className="px-5 py-3">Thời gian</th>
                       <th className="px-5 py-3">Cán bộ</th>
@@ -3443,7 +3557,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
                           <td className="px-5 py-3 text-gray-400 text-xs whitespace-nowrap">{new Date(log.createdAt).toLocaleString('vi-VN')}</td>
                           <td className="px-5 py-3"><p className="font-bold text-gray-800">{log.staffName}</p><p className="text-gray-400 text-xs">@{log.username}</p></td>
                           <td className="px-5 py-3 text-gray-500 text-xs">{log.role}</td>
-                          <td className="px-5 py-3"><span className={`px-2 py-1 rounded-lg text-[10px] font-black ${actionColors[log.action] || 'bg-gray-100 text-gray-600'}`}>{actionLabels[log.action] || log.action}</span></td>
+                          <td className="px-5 py-3"><span className={`px-2 py-1 rounded-lg text-xs font-bold ${actionColors[log.action] || 'bg-gray-100 text-gray-600'}`}>{actionLabels[log.action] || log.action}</span></td>
                           <td className="px-5 py-3 text-gray-600 text-xs max-w-xs truncate" title={log.detail}>{log.detail}</td>
                           <td className="px-5 py-3 text-center">
                             <button
