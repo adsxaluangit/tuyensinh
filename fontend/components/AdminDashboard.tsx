@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useEffect, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import html2pdf from 'html2pdf.js';
@@ -418,6 +418,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
   const [editSubmissionData, setEditSubmissionData] = useState<Record<string, any>>({});
   const [isSavingSubmission, setIsSavingSubmission] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkEmailLoading, setIsBulkEmailLoading] = useState(false);
+  const [bulkEmailResult, setBulkEmailResult] = useState<{ success: string[]; failed: string[]; noEmail: string[] } | null>(null);
 
   // Pagination State
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25 });
@@ -810,15 +812,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
     const template = admissionTemplates[admissionSubTab];
     if (!template) return;
 
+    // Lọc bỏ meta-fields mà Strapi v5 không chấp nhận trong payload
+    const { id, documentId, createdAt, updatedAt, publishedAt, __v, ...cleanTemplate } = template as any;
+
     try {
       // Tìm template theo campus
       const allTemplates = await api.fetchAdmissionTemplates();
-      const existing = allTemplates.find((t: any) => t.campus === admissionSubTab);
+      const existing = allTemplates.find((t: any) => (t.attributes?.campus || t.campus) === admissionSubTab);
 
       if (existing) {
-        await api.updateAdmissionTemplate(existing.documentId || existing.id, template);
+        await api.updateAdmissionTemplate(existing.documentId || existing.id, cleanTemplate);
       } else {
-        await api.createAdmissionTemplate(template);
+        await api.createAdmissionTemplate(cleanTemplate);
       }
       alert(`Đã lưu mẫu "${admissionSubTab}" lên hệ thống.`);
       fetchData();
@@ -827,6 +832,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
       alert("Lỗi khi lưu mẫu văn bản");
     }
   };
+
 
   const handleSaveSeq = async (nextSeq: number) => {
     try {
@@ -1432,6 +1438,61 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
         alert("Có lỗi xảy ra khi xóa hồ sơ. Vui lòng thử lại.");
         fetchData();
       }
+    }
+  };
+
+  // Chọn tất cả hồ sơ theo bộ lọc hiện tại
+  const handleSelectByFilter = () => {
+    if (selectedIds.size === filteredSubmissions.length && filteredSubmissions.length > 0) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredSubmissions.map(s => s.id)));
+    }
+  };
+
+  // In hàng loạt giấy trúng tuyển — số báo danh để trống
+  const handleBulkPrint = () => {
+    if (selectedIds.size === 0) return alert('Vui lòng chọn ít nhất một hồ sơ!');
+    const selectedList = filteredSubmissions.filter(s => selectedIds.has(s.id));
+    if (selectedList.length === 0) return alert('Không tìm thấy hồ sơ đã chọn!');
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return alert('Trình duyệt đã chặn pop-up. Vui lòng cho phép và thử lại.');
+    const allPages = selectedList.map((s, idx) => {
+      const template = getTemplateForSubmission(s.campus);
+      const fragment = getAdmissionNoticeHtml(template, s, undefined);
+      return fragment + (idx < selectedList.length - 1 ? '<div style="page-break-after:always;"></div>' : '');
+    }).join('\n');
+    printWindow.document.write(`<html><head><title>In ${selectedList.length} Giấy Trúng Tuyển</title><style>@page{size:A4;margin:0}body{margin:0;padding:0}</style></head><body>${allPages}<script>window.onload=()=>{setTimeout(()=>{window.print();window.onafterprint=()=>window.close();},400);};<\/script></body></html>`);
+    printWindow.document.close();
+    logAction('APPROVE', `In hàng loạt ${selectedList.length} giấy trúng tuyển`);
+  };
+
+  // Gửi email hàng loạt đính kèm PDF
+  const handleBulkEmail = async () => {
+    if (selectedIds.size === 0) return alert('Vui lòng chọn ít nhất một hồ sơ!');
+    const selectedList = filteredSubmissions.filter(s => selectedIds.has(s.id));
+    const withEmail = selectedList.filter(s => s.email && s.email.includes('@'));
+    if (withEmail.length === 0) return alert('Không có hồ sơ nào có email hợp lệ.');
+    const noEmailCount = selectedList.length - withEmail.length;
+    if (!window.confirm(`Xác nhận gửi email đến ${withEmail.length} thí sinh?${noEmailCount > 0 ? `\n(${noEmailCount} hồ sơ không có email sẽ bỏ qua)` : ''}\n\nHệ thống sẽ tạo PDF cho từng người. Quá trình này có thể mất vài phút.`)) return;
+    setIsBulkEmailLoading(true);
+    setBulkEmailResult(null);
+    try {
+      const items: any[] = [];
+      for (const s of withEmail) {
+        const template = getTemplateForSubmission(s.campus);
+        const html = getAdmissionNoticeHtml(template, s, undefined);
+        let pdfBase64 = '';
+        try { pdfBase64 = await generateAdmissionNoticePdf(html); } catch (e) { console.error(`Lỗi PDF ${s.fullName}:`, e); }
+        items.push({ documentId: s.docId, pdfBase64, studentName: s.fullName, email: s.email, campus: s.campus, specialty: s.choice1Specialty || s.choice1Major || '', educationLevel: s.educationLevel || '', admissionHour: template.admissionHour, admissionDay: template.admissionDay, admissionMonth: template.admissionMonth, admissionYear: template.admissionYear, announcer: template.announcer, location: template.location, hotline: template.hotline, website: template.website });
+      }
+      const result = await api.sendBulkAdmissionEmail(items);
+      setBulkEmailResult({ success: result.success || [], failed: result.failed || [], noEmail: selectedList.filter(s => !s.email || !s.email.includes('@')).map(s => s.fullName) });
+      logAction('APPROVE', `Gửi email hàng loạt ${result.success?.length || 0}/${withEmail.length} thí sinh`);
+    } catch (err: any) {
+      alert(`Lỗi khi gửi email: ${err?.message || 'Vui lòng thử lại.'}`);
+    } finally {
+      setIsBulkEmailLoading(false);
     }
   };
 
@@ -2640,7 +2701,32 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ onLogout, user }) => {
               <button onClick={handleExportExcel} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-[0.85rem] font-bold flex items-center gap-2 hover:bg-emerald-700 transition-colors"><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Xuất Excel</button>
               <div className="flex-1 relative"><input type="text" placeholder="Tìm tên, SĐT, CCCD..." className="w-full bg-gray-50 border border-gray-200 pl-10 pr-4 py-2 rounded-xl text-[0.85rem] outline-none focus:ring-2 focus:ring-blue-500/20" value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setPagination(prev => ({ ...prev, page: 1 })); }} /><svg className="w-4 h-4 absolute left-3.5 top-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg></div>
             </div>
-            {!isKetoan && <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto items-center"><span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-3">Thao tác nhanh:</span><ActionButton label="Tiếp nhận" color="blue" onClick={() => updateStatusForSelected(SubmissionStatus.RECEIVED)} />{user?.role !== 'Cán bộ tiếp nhận' && (<><ActionButton label="Duyệt trúng tuyển" color="green" onClick={() => updateStatusForSelected(SubmissionStatus.APPROVED)} /><ActionButton label="Khóa hồ sơ" color="slate" onClick={() => updateStatusForSelected(SubmissionStatus.LOCKED)} /><ActionButton label="Hủy trạng thái" color="orange" onClick={() => updateStatusForSelected(SubmissionStatus.PENDING)} /></>)}{isAdmin && <ActionButton label="Xóa hồ sơ" color="red" onClick={handleDeleteSelected} />}{isAdmin && (<><div className="w-px h-5 bg-gray-200 mx-1 shrink-0" /><button onClick={handleDownloadRegistrationTemplate} title="Tải file Excel mẫu để nhập hồ sơ" className="px-4 py-1.5 rounded-lg border text-[0.8rem] font-bold uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-violet-50 text-violet-700 border-violet-100 hover:bg-violet-100 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>Tải file mẫu</button><button onClick={() => importFileRef.current?.click()} disabled={isLoading} title="Import danh sách hồ sơ từ file Excel" className="px-4 py-1.5 rounded-lg border text-[0.8rem] font-bold uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-100 disabled:opacity-50 flex items-center gap-1.5"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4 4l-4-4m0 0l4-4m-4 4V4" /></svg>{isLoading ? 'Đang import...' : 'Import Excel'}</button><input ref={importFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImportExcel} /></>)}</div>}
+            {!isKetoan && <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-3 flex gap-2 overflow-x-auto items-center"><span className="text-xs font-bold text-gray-400 uppercase tracking-widest px-3">Thao tác nhanh:</span><ActionButton label="Tiếp nhận" color="blue" onClick={() => updateStatusForSelected(SubmissionStatus.RECEIVED)} />{user?.role !== 'Cán bộ tiếp nhận' && (<><ActionButton label="Duyệt trúng tuyển" color="green" onClick={() => updateStatusForSelected(SubmissionStatus.APPROVED)} /><ActionButton label="Khóa hồ sơ" color="slate" onClick={() => updateStatusForSelected(SubmissionStatus.LOCKED)} /><ActionButton label="Hủy trạng thái" color="orange" onClick={() => updateStatusForSelected(SubmissionStatus.PENDING)} /></>)}{isAdmin && <ActionButton label="Xóa hồ sơ" color="red" onClick={handleDeleteSelected} />}<div className="w-px h-5 bg-gray-200 mx-1 shrink-0" /><button onClick={handleBulkPrint} disabled={selectedIds.size === 0} className="px-4 py-1.5 rounded-lg border text-[0.8rem] font-bold uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-blue-900 text-white border-blue-900 hover:bg-blue-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" title="In hàng loạt giấy trúng tuyển (số BD để trống)"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>In {selectedIds.size > 0 ? `${selectedIds.size} giấy` : 'giấy'}</button><button onClick={handleBulkEmail} disabled={selectedIds.size === 0 || isBulkEmailLoading} className="px-4 py-1.5 rounded-lg border text-[0.8rem] font-bold uppercase tracking-tight transition-all active:scale-95 whitespace-nowrap bg-emerald-700 text-white border-emerald-700 hover:bg-emerald-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5" title="Gửi email đính kèm PDF giấy trúng tuyển">{isBulkEmailLoading ? <><svg className="w-3.5 h-3.5 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" /></svg>Đang gửi...</> : <><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>Gửi email {selectedIds.size > 0 ? `${selectedIds.size} TS` : ''}</>}</button></div>}
+            {/* Banner tóm tắt hồ sơ đã chọn */}
+            {selectedIds.size > 0 && (
+              <div className="bg-blue-900 text-white rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-lg">
+                <div className="flex items-center gap-3">
+                  <svg className="w-5 h-5 text-blue-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  <span className="font-bold text-sm">Đã chọn <span className="text-yellow-300">{selectedIds.size}</span> hồ sơ</span>
+                  <span className="text-blue-300 text-xs">| {(() => { const n = filteredSubmissions.filter(s => selectedIds.has(s.id) && s.email && s.email.includes('@')).length; return `${n} có email`; })()}</span>
+                </div>
+                <button onClick={() => setSelectedIds(new Set())} className="text-blue-300 hover:text-white text-xs font-bold uppercase tracking-widest transition-colors flex items-center gap-1"><svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>Bỏ chọn</button>
+              </div>
+            )}
+            {/* Modal kết quả gửi email */}
+            {bulkEmailResult && (
+              <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4" onClick={() => setBulkEmailResult(null)}>
+                <div className="bg-white rounded-3xl shadow-2xl p-8 max-w-lg w-full" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-xl font-bold text-blue-900 mb-5">Kết quả gửi email</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 bg-green-50 border border-green-200 rounded-xl p-4"><svg className="w-6 h-6 text-green-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg><div><p className="font-bold text-green-800">Thành công: {bulkEmailResult.success.length} thí sinh</p>{bulkEmailResult.success.length > 0 && <p className="text-green-600 text-xs mt-1">{bulkEmailResult.success.slice(0,5).join(', ')}{bulkEmailResult.success.length > 5 ? '...' : ''}</p>}</div></div>
+                    {bulkEmailResult.failed.length > 0 && <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl p-4"><svg className="w-6 h-6 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg><div><p className="font-bold text-red-700">Thất bại: {bulkEmailResult.failed.length} thí sinh</p><p className="text-red-500 text-xs mt-1">{bulkEmailResult.failed.join(', ')}</p></div></div>}
+                    {bulkEmailResult.noEmail.length > 0 && <div className="flex items-center gap-3 bg-yellow-50 border border-yellow-200 rounded-xl p-4"><svg className="w-6 h-6 text-yellow-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg><div><p className="font-bold text-yellow-700">Không có email: {bulkEmailResult.noEmail.length} hồ sơ</p><p className="text-yellow-600 text-xs mt-1">{bulkEmailResult.noEmail.slice(0,5).join(', ')}{bulkEmailResult.noEmail.length > 5 ? '...' : ''}</p></div></div>}
+                  </div>
+                  <button onClick={() => setBulkEmailResult(null)} className="mt-6 w-full py-3 bg-blue-900 text-white rounded-2xl font-bold hover:bg-blue-800 transition-colors">Xác nhận</button>
+                </div>
+              </div>
+            )}
             <div className="bg-white rounded-3xl shadow-xl border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
