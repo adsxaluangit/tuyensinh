@@ -27,6 +27,12 @@ export default {
 
         const actions = ['find', 'findOne', 'create', 'update', 'delete'];
 
+        // Thêm quyền cho custom action gửi email hàng loạt
+        const customActions = [
+          { api: 'registration', action: 'api::registration.registration.sendBulkEmail' }
+        ];
+
+
         for (const api of apis) {
           for (const action of actions) {
             const apiUid = `api::${api}.${api}`;
@@ -43,6 +49,17 @@ export default {
             }
           }
         }
+
+        // Cấp quyền cho custom actions
+        for (const { action } of customActions) {
+          const hasPermission = publicRole.permissions.some(p => p.action === action);
+          if (!hasPermission) {
+            await strapi.query('plugin::users-permissions.permission').create({
+              data: { action, role: publicRole.id },
+            });
+          }
+        }
+
         console.log('Cấp quyền thành công!');
       }
 

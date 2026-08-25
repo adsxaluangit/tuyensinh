@@ -363,6 +363,30 @@ export const updateAdmissionTemplate = async (documentId: string, data: any) => 
     });
 };
 
+// Gửi email hàng loạt giấy trúng tuyển
+export const sendBulkAdmissionEmail = async (items: Array<{
+    documentId: string;
+    pdfBase64: string;
+    studentName: string;
+    email: string;
+    campus: string;
+    specialty: string;
+    educationLevel: string;
+    admissionHour?: string;
+    admissionDay?: string;
+    admissionMonth?: string;
+    admissionYear?: string;
+    announcer?: string;
+    location?: string;
+    hotline?: string;
+    website?: string;
+}>) => {
+    return await fetchAPI('/api/registrations/send-bulk-email', {
+        method: 'POST',
+        body: JSON.stringify({ items }),
+    });
+};
+
 // System Settings
 export const fetchSystemSettings = async () => {
     const data = await fetchAPI('/api/system-settings?pagination[pageSize]=1000');
